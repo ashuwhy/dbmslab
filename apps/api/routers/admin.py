@@ -128,6 +128,12 @@ async def create_user(
                 detail="Full name, age, and country are required for student users"
             )
             
+        if user.age < 13:
+            raise HTTPException(
+                status_code=400,
+                detail="Student must be at least 13 years old"
+            )
+            
         student = Student(
             email=user.email,
             full_name=user.full_name,
@@ -138,7 +144,15 @@ async def create_user(
         )
         db.add(student)
 
-    await db.commit()
+    try:
+        await db.commit()
+    except Exception as e:
+        await db.rollback()
+        # Clean up the error message
+        error_msg = str(e)
+        if "student_age_check" in error_msg:
+            raise HTTPException(status_code=400, detail="Student must be at least 13 years old")
+        raise HTTPException(status_code=400, detail=str(e))
     await db.refresh(db_user)
     return {"message": "User created successfully", "user_id": db_user.id}
 
