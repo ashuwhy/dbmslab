@@ -16,7 +16,16 @@ export const logout = () => {
     if (typeof window !== 'undefined') {
         localStorage.removeItem('token');
         localStorage.removeItem('role');
+        window.dispatchEvent(new Event('auth-change'));
         window.location.href = '/login';
+    }
+};
+
+export const setAuth = (token: string, role: string) => {
+    if (typeof window !== 'undefined') {
+        localStorage.setItem('token', token);
+        localStorage.setItem('role', role);
+        window.dispatchEvent(new Event('auth-change'));
     }
 };
 

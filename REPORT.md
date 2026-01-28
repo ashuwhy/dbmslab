@@ -3,7 +3,7 @@
 **Group Name:** Index Corruption
 **Members:**
 
-- [Member 1 Name] ([Roll No])
+- Ashutosh Sharma (23CS10005)
 - [Member 2 Name] ([Roll No])
 - [Member 3 Name] ([Roll No])
 - [Member 4 Name] ([Roll No])
@@ -41,6 +41,7 @@ Major tables used:
 - **User Management**: Create system users with specific roles.
 - **Course Assignment**: Assign instructors to courses.
 - **Student Management**: Cascade delete students and their enrollments.
+- **Data Editing**: Update details for Courses and Instructors via modal dialogs.
 
 ### 5. Analyst Module
 

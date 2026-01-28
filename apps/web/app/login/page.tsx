@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 
+import { setAuth } from '@/lib/auth';
+
 export default function LoginPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -31,8 +33,7 @@ export default function LoginPage() {
             }
 
             const data = await res.json();
-            localStorage.setItem('token', data.access_token);
-            localStorage.setItem('role', data.role);
+            setAuth(data.access_token, data.role);
 
             if (data.role === 'admin') router.push('/admin');
             else if (data.role === 'student') router.push('/student');
@@ -97,19 +98,19 @@ export default function LoginPage() {
                             </Button>
                         </form>
                     </CardContent>
-                    <CardFooter className="flex-col space-y-4 border-t border-zinc-800 pt-6">
+                    {/* <CardFooter className="flex-col space-y-4 border-t border-zinc-800 pt-6">
                         <div className="text-center text-xs text-zinc-500">
                             Demo credentials available for each role
                         </div>
-                    </CardFooter>
+                    </CardFooter> */}
                 </Card>
 
-                <div className="grid grid-cols-4 gap-2 text-center text-xs text-zinc-500 opacity-50">
+                {/* <div className="grid grid-cols-4 gap-2 text-center text-xs text-zinc-500 opacity-50">
                     <div>Student</div>
                     <div>Instructor</div>
                     <div>Admin</div>
                     <div>Analyst</div>
-                </div>
+                </div> */}
             </div>
         </div>
     );

@@ -20,6 +20,11 @@ class UserCreateRequest(BaseModel):
     email: str
     password: str
     role: str
+    # Student specific fields
+    full_name: Optional[str] = None
+    age: Optional[int] = None
+    country: Optional[str] = None
+    skill_level: Optional[str] = None
 
 class UserResponse(BaseModel):
     id: int
@@ -114,6 +119,25 @@ async def create_user(
     hashed_password = get_password_hash(user.password)
     db_user = AppUser(email=user.email, password_hash=hashed_password, role=user.role)
     db.add(db_user)
+    
+    # If role is student, create Student record
+    if user.role == "student":
+        if not all([user.full_name, user.age, user.country]):
+            raise HTTPException(
+                status_code=400, 
+                detail="Full name, age, and country are required for student users"
+            )
+            
+        student = Student(
+            email=user.email,
+            full_name=user.full_name,
+            age=user.age,
+            country=user.country,
+            skill_level=user.skill_level or "beginner",
+            category="student"
+        )
+        db.add(student)
+
     await db.commit()
     await db.refresh(db_user)
     return {"message": "User created successfully", "user_id": db_user.id}

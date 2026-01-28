@@ -118,6 +118,7 @@ class Student(Base):
     __tablename__ = "student"
     
     student_id = Column(Integer, primary_key=True, autoincrement=True)
+    email = Column(String(100), unique=True, nullable=False)
     full_name = Column(String(100), nullable=False)
     age = Column(Integer, nullable=False)
     country = Column(String(50), nullable=False)

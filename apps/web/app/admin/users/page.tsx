@@ -20,6 +20,10 @@ export default function AdminUsersPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [role, setRole] = useState('student');
+    const [fullName, setFullName] = useState('');
+    const [age, setAge] = useState('');
+    const [country, setCountry] = useState('');
+    const [skillLevel, setSkillLevel] = useState('beginner');
     const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(true);
 
@@ -42,16 +46,27 @@ export default function AdminUsersPage() {
         e.preventDefault();
         setMessage('');
         try {
+            const body: Record<string, string | number> = { email, password, role };
+            if (role === 'student') {
+                body.full_name = fullName;
+                body.age = parseInt(age);
+                body.country = country;
+                body.skill_level = skillLevel;
+            }
+
             const res = await fetchWithAuth(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/admin/users`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password, role }),
+                body: JSON.stringify(body),
             });
 
             if (res.ok) {
                 setMessage('User created successfully');
                 setEmail('');
                 setPassword('');
+                setFullName('');
+                setAge('');
+                setCountry('');
                 loadUsers();
             } else {
                 const err = await res.json();
@@ -141,6 +156,58 @@ export default function AdminUsersPage() {
                                     <option value="analyst" className="bg-zinc-900">Analyst</option>
                                 </select>
                             </div>
+
+                            {role === 'student' && (
+                                <>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="fullName">Full Name</Label>
+                                        <Input
+                                            id="fullName"
+                                            required
+                                            value={fullName}
+                                            onChange={(e) => setFullName(e.target.value)}
+                                            placeholder="John Doe"
+                                            className="bg-black/20"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="age">Age</Label>
+                                        <Input
+                                            id="age"
+                                            type="number"
+                                            required
+                                            value={age}
+                                            onChange={(e) => setAge(e.target.value)}
+                                            placeholder="20"
+                                            className="bg-black/20"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="country">Country</Label>
+                                        <Input
+                                            id="country"
+                                            required
+                                            value={country}
+                                            onChange={(e) => setCountry(e.target.value)}
+                                            placeholder="India"
+                                            className="bg-black/20"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="skillLevel">Skill Level</Label>
+                                        <select
+                                            id="skillLevel"
+                                            className="flex h-9 w-full rounded-none border border-input bg-black/20 px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm text-zinc-100"
+                                            value={skillLevel}
+                                            onChange={(e) => setSkillLevel(e.target.value)}
+                                        >
+                                            <option value="beginner" className="bg-zinc-900">Beginner</option>
+                                            <option value="intermediate" className="bg-zinc-900">Intermediate</option>
+                                            <option value="advanced" className="bg-zinc-900">Advanced</option>
+                                        </select>
+                                    </div>
+                                </>
+                            )}
                             <Button type="submit" className="w-full">
                                 Create User
                             </Button>
