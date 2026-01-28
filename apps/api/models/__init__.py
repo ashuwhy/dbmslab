@@ -1,8 +1,9 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Date, Float, DateTime, Text, BigInteger
+from sqlalchemy import Column, Integer, String, ForeignKey, Date, Float, DateTime, Text, CheckConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
 
+# Authentication User (separate from domain tables)
 class AppUser(Base):
     __tablename__ = "app_user"
     
@@ -12,78 +13,143 @@ class AppUser(Base):
     role = Column(String, nullable=False)  # admin, instructor, student, analyst
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    # Relationships can be added if we link users to student/instructor tables
-    # For now, we might keep them loose or add foreign keys if strict mapping is needed.
 
+# Domain tables matching 23CS10005_A2.sql schema
 class University(Base):
     __tablename__ = "university"
     
-    # Assuming schema based on typical assignment
-    # Adjust types after inspection if needed
-    university_id = Column(Integer, primary_key=True)
-    university_name = Column(String, nullable=False)
-    address = Column(String)
+    university_id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(100), nullable=False, unique=True)
+    country = Column(String(50), nullable=False)
+    
+    # Relationships
+    courses = relationship("Course", back_populates="university")
+
 
 class Program(Base):
     __tablename__ = "program"
     
-    program_id = Column(Integer, primary_key=True)
-    program_name = Column(String, nullable=False)
-    duration_years = Column(Integer)
-    # university_id might be here
+    program_id = Column(Integer, primary_key=True, autoincrement=True)
+    program_name = Column(String(100), nullable=False)
+    program_type = Column(String(50), nullable=False)  # certificate/diploma/degree
+    duration_weeks_or_months = Column(Integer, nullable=False)
+    
+    # Relationships
+    courses = relationship("Course", back_populates="program")
+
+
+class Topic(Base):
+    __tablename__ = "topic"
+    
+    topic_id = Column(Integer, primary_key=True, autoincrement=True)
+    topic_name = Column(String(100), nullable=False, unique=True)
+    
+    # Relationships
+    courses = relationship("CourseTopic", back_populates="topic")
+
+
+class Textbook(Base):
+    __tablename__ = "textbook"
+    
+    textbook_id = Column(Integer, primary_key=True, autoincrement=True)
+    title = Column(String(150), nullable=False)
+    isbn = Column(String(20), unique=True)
+    url = Column(Text)
+    
+    # Relationships
+    courses = relationship("Course", back_populates="textbook")
+
 
 class Course(Base):
     __tablename__ = "course"
     
-    course_id = Column(String, primary_key=True) # ID often string like CS101
-    title = Column(String, nullable=False)
-    credits = Column(Integer)
-    description = Column(Text)
-    # program_id usually here
+    course_id = Column(Integer, primary_key=True, autoincrement=True)
+    course_name = Column(String(150), nullable=False, unique=True)
+    duration_weeks = Column(Integer, nullable=False)
+    university_id = Column(Integer, ForeignKey("university.university_id"), nullable=False)
+    program_id = Column(Integer, ForeignKey("program.program_id"), nullable=False)
+    textbook_id = Column(Integer, ForeignKey("textbook.textbook_id"), nullable=False)
+    
+    # Relationships
+    university = relationship("University", back_populates="courses")
+    program = relationship("Program", back_populates="courses")
+    textbook = relationship("Textbook", back_populates="courses")
+    topics = relationship("CourseTopic", back_populates="course")
+    enrollments = relationship("Enrollment", back_populates="course")
+    teaching_assignments = relationship("TeachingAssignment", back_populates="course")
+    content_items = relationship("ContentItem", back_populates="course")
 
-class Student(Base):
-    __tablename__ = "student"
+
+class CourseTopic(Base):
+    __tablename__ = "course_topic"
     
-    student_id = Column(Integer, primary_key=True)
-    name = Column(String, nullable=False)
-    email = Column(String, unique=True)
-    # program_id usually here
+    course_id = Column(Integer, ForeignKey("course.course_id", ondelete="CASCADE"), primary_key=True)
+    topic_id = Column(Integer, ForeignKey("topic.topic_id", ondelete="CASCADE"), primary_key=True)
     
+    # Relationships
+    course = relationship("Course", back_populates="topics")
+    topic = relationship("Topic", back_populates="courses")
+
+
 class Instructor(Base):
     __tablename__ = "instructor"
     
-    instructor_id = Column(Integer, primary_key=True)
-    name = Column(String, nullable=False)
-    email = Column(String, unique=True)
-    dept_name = Column(String)
-
-class Enrollment(Base):
-    __tablename__ = "enrollment"
+    instructor_id = Column(Integer, primary_key=True, autoincrement=True)
+    full_name = Column(String(100), nullable=False)
+    email = Column(String(100), unique=True)
     
-    enrollment_id = Column(Integer, primary_key=True, autoincrement=True)
-    student_id = Column(Integer, ForeignKey("student.student_id"))
-    course_id = Column(String, ForeignKey("course.course_id"))
-    semester = Column(String)
-    year = Column(Integer)
-    grade = Column(String)
-    evaluation_score = Column(Float)
+    # Relationships
+    teaching_assignments = relationship("TeachingAssignment", back_populates="instructor")
+
 
 class TeachingAssignment(Base):
     __tablename__ = "teaching_assignment"
     
-    assignment_id = Column(Integer, primary_key=True)
-    instructor_id = Column(Integer, ForeignKey("instructor.instructor_id"))
-    course_id = Column(String, ForeignKey("course.course_id"))
-    semester = Column(String)
-    year = Column(Integer)
+    instructor_id = Column(Integer, ForeignKey("instructor.instructor_id", ondelete="CASCADE"), primary_key=True)
+    course_id = Column(Integer, ForeignKey("course.course_id", ondelete="CASCADE"), primary_key=True)
+    role = Column(String(50))
+    
+    # Relationships
+    instructor = relationship("Instructor", back_populates="teaching_assignments")
+    course = relationship("Course", back_populates="teaching_assignments")
+
+
+class Student(Base):
+    __tablename__ = "student"
+    
+    student_id = Column(Integer, primary_key=True, autoincrement=True)
+    full_name = Column(String(100), nullable=False)
+    age = Column(Integer, nullable=False)
+    country = Column(String(50), nullable=False)
+    category = Column(String(50))  # student/professional
+    skill_level = Column(String(50))  # beginner/intermediate/advanced
+    email = Column(String(100), unique=True)  # Added for linking to AppUser
+    
+    # Relationships
+    enrollments = relationship("Enrollment", back_populates="student")
+
+
+class Enrollment(Base):
+    __tablename__ = "enrollment"
+    
+    student_id = Column(Integer, ForeignKey("student.student_id", ondelete="CASCADE"), primary_key=True)
+    course_id = Column(Integer, ForeignKey("course.course_id", ondelete="CASCADE"), primary_key=True)
+    enroll_date = Column(Date, nullable=False)
+    evaluation_score = Column(Integer)
+    
+    # Relationships
+    student = relationship("Student", back_populates="enrollments")
+    course = relationship("Course", back_populates="enrollments")
+
 
 class ContentItem(Base):
     __tablename__ = "content_item"
     
     content_id = Column(Integer, primary_key=True, autoincrement=True)
-    course_id = Column(String, ForeignKey("course.course_id"))
-    title = Column(String, nullable=False)
-    content_type = Column(String) # video, pdf, etc
-    url = Column(String)
+    course_id = Column(Integer, ForeignKey("course.course_id", ondelete="CASCADE"), nullable=False)
+    content_type = Column(String(30), nullable=False)  # book/video/notes
+    title = Column(String(150), nullable=False)
+    url = Column(Text)
     
-# Other tables: topic, textbook, course_topic can be added as needed
+    # Relationships
+    course = relationship("Course", back_populates="content_items")

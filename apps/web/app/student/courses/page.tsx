@@ -4,23 +4,33 @@ import { useState, useEffect } from 'react';
 import { fetchWithAuth } from '@/lib/auth';
 
 interface Course {
-    course_id: string;
-    title: string;
-    credits: number;
-    description: string;
+    course_id: number;
+    course_name: string;
+    duration_weeks: number;
+    university_name: string | null;
+    program_name: string | null;
+    topics: string[];
 }
 
 export default function StudentCoursesPage() {
     const [courses, setCourses] = useState<Course[]>([]);
     const [search, setSearch] = useState('');
+    const [topic, setTopic] = useState('');
+    const [university, setUniversity] = useState('');
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
+    const [enrolledIds, setEnrolledIds] = useState<Set<number>>(new Set());
 
     const loadCourses = async () => {
         setLoading(true);
         try {
-            const query = search ? `?query=${encodeURIComponent(search)}` : '';
-            const res = await fetchWithAuth(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/student/courses${query}`);
+            const params = new URLSearchParams();
+            if (search) params.append('query', search);
+            if (topic) params.append('topic', topic);
+            if (university) params.append('university', university);
+
+            const queryString = params.toString() ? `?${params.toString()}` : '';
+            const res = await fetchWithAuth(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/student/courses${queryString}`);
             if (res.ok) {
                 const data = await res.json();
                 setCourses(data);
@@ -32,9 +42,21 @@ export default function StudentCoursesPage() {
         }
     };
 
+    const loadEnrollments = async () => {
+        try {
+            const res = await fetchWithAuth(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/student/enrollments/me`);
+            if (res.ok) {
+                const data = await res.json();
+                setEnrolledIds(new Set(data.map((e: any) => e.course_id)));
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
     useEffect(() => {
         loadCourses();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        loadEnrollments();
     }, []);
 
     const handleSearch = (e: React.FormEvent) => {
@@ -42,7 +64,7 @@ export default function StudentCoursesPage() {
         loadCourses();
     };
 
-    const handleEnroll = async (courseId: string) => {
+    const handleEnroll = async (courseId: number) => {
         setMessage('');
         try {
             const res = await fetchWithAuth(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/student/enrollments`, {
@@ -52,6 +74,7 @@ export default function StudentCoursesPage() {
 
             if (res.ok) {
                 setMessage('Enrolled successfully!');
+                setEnrolledIds(new Set([...enrolledIds, courseId]));
             } else {
                 const err = await res.json();
                 setMessage(`Error: ${err.detail}`);
@@ -63,54 +86,94 @@ export default function StudentCoursesPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <h1 className="text-2xl font-bold">Available Courses</h1>
+            <div className="section-header">
+                <h1 className="section-title">Available Courses</h1>
+                <p className="section-description">Browse and enroll in courses from top universities</p>
             </div>
 
-            <form onSubmit={handleSearch} className="flex gap-2">
+            {/* Search and Filters */}
+            <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <input
                     type="text"
                     placeholder="Search courses..."
-                    className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6 pl-3"
+                    className="input md:col-span-2"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                 />
-                <button
-                    type="submit"
-                    className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-                >
-                    Search
-                </button>
+                <input
+                    type="text"
+                    placeholder="Filter by topic..."
+                    className="input"
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
+                />
+                <div className="flex gap-2">
+                    <input
+                        type="text"
+                        placeholder="University..."
+                        className="input flex-1"
+                        value={university}
+                        onChange={(e) => setUniversity(e.target.value)}
+                    />
+                    <button type="submit" className="btn btn-primary px-6">
+                        Search
+                    </button>
+                </div>
             </form>
 
+            {/* Message */}
             {message && (
-                <div className={`p-4 rounded-md ${message.includes('Error') ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
+                <div className={`p-3 rounded-lg text-sm ${message.includes('Error') ? 'bg-red-500/10 border border-red-500/20 text-red-400' : 'bg-green-500/10 border border-green-500/20 text-green-400'}`}>
                     {message}
                 </div>
             )}
 
+            {/* Courses Grid */}
             {loading ? (
-                <p>Loading...</p>
+                <div className="flex justify-center py-12">
+                    <div className="loading"></div>
+                </div>
+            ) : courses.length === 0 ? (
+                <div className="card empty-state">
+                    <p>No courses found matching your criteria.</p>
+                </div>
             ) : (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-4">
                     {courses.map((course) => (
-                        <div key={course.course_id} className="relative flex items-center space-x-3 rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm focus-within:ring-2 focus-within:ring-indigo-500 focus-within:ring-offset-2 hover:border-gray-400">
-                            <div className="min-w-0 flex-1">
-                                <a href="#" className="focus:outline-none">
-                                    <span className="absolute inset-0" aria-hidden="true" />
-                                    <p className="text-sm font-medium text-gray-900">{course.course_id} - {course.title}</p>
-                                    <p className="truncate text-sm text-gray-500">{course.credits} Credits</p>
-                                </a>
+                        <div key={course.course_id} className="card hover:border-zinc-600">
+                            <div className="flex items-start justify-between gap-4">
+                                <div className="flex-1">
+                                    <h3 className="text-lg font-semibold text-white">{course.course_name}</h3>
+                                    <div className="flex items-center gap-3 mt-2 text-sm text-zinc-400">
+                                        {course.university_name && (
+                                            <span>🏛️ {course.university_name}</span>
+                                        )}
+                                        <span>📅 {course.duration_weeks} weeks</span>
+                                        {course.program_name && (
+                                            <span>📜 {course.program_name}</span>
+                                        )}
+                                    </div>
+                                    {course.topics.length > 0 && (
+                                        <div className="flex flex-wrap gap-2 mt-3">
+                                            {course.topics.map((t, i) => (
+                                                <span key={i} className="badge badge-primary">{t}</span>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                <div>
+                                    {enrolledIds.has(course.course_id) ? (
+                                        <span className="badge badge-success">Enrolled ✓</span>
+                                    ) : (
+                                        <button
+                                            onClick={() => handleEnroll(course.course_id)}
+                                            className="btn btn-secondary"
+                                        >
+                                            Enroll
+                                        </button>
+                                    )}
+                                </div>
                             </div>
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation(); // prevent card click
-                                    handleEnroll(course.course_id);
-                                }}
-                                className="relative z-10 inline-flex items-center rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-                            >
-                                Enroll
-                            </button>
                         </div>
                     ))}
                 </div>

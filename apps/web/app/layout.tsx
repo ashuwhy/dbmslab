@@ -6,8 +6,8 @@ import Navbar from './components/Navbar';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'University Management System',
-  description: 'DBMS Assignment IV',
+  title: 'UMS',
+  description: 'University Management System',
 };
 
 export default function RootLayout({
@@ -16,10 +16,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
+    <html lang="en" className="dark">
+      <body className={`${inter.className} bg-[#09090b] text-zinc-100 min-h-screen`}>
         <Navbar />
-        <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6">
+        <main className="mx-auto max-w-5xl px-6 py-8">
           {children}
         </main>
       </body>
