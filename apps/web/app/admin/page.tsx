@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { fetchWithAuth } from '@/lib/auth';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 
 interface Stats {
     total_users: number;
@@ -33,7 +34,7 @@ export default function AdminDashboard() {
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[50vh]">
-                <div className="loading"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
             </div>
         );
     }
@@ -55,33 +56,39 @@ export default function AdminDashboard() {
 
     return (
         <div className="space-y-8">
-            <div className="section-header">
-                <h1 className="text-2xl font-bold text-white">Admin Dashboard</h1>
-                <p className="text-zinc-400 mt-1">System overview and management</p>
+            <div className="space-y-2">
+                <h1 className="text-3xl font-bold tracking-tight text-white">Admin Dashboard</h1>
+                <p className="text-zinc-400">System overview and management</p>
             </div>
 
             {/* Stats Grid */}
-            <div className="stats-grid">
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 {statCards.map((stat, i) => (
-                    <div key={i} className="card">
-                        <div className="flex items-center gap-3 mb-2">
+                    <Card key={i} className="bg-zinc-900/50 border-zinc-800">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium text-zinc-400">
+                                {stat.label}
+                            </CardTitle>
                             <span className="text-xl">{stat.icon}</span>
-                            <p className="card-header">{stat.label}</p>
-                        </div>
-                        <p className="card-value">{stat.value}</p>
-                    </div>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold text-white">{stat.value}</div>
+                        </CardContent>
+                    </Card>
                 ))}
             </div>
 
             {/* Quick Links */}
-            <div>
-                <h2 className="text-lg font-semibold text-white mb-4">Quick Actions</h2>
+            <div className="space-y-4">
+                <h2 className="text-xl font-semibold text-white tracking-tight">Quick Actions</h2>
                 <div className="grid gap-4 md:grid-cols-2">
                     {quickLinks.map((link, i) => (
-                        <Link key={i} href={link.href} className="card hover:border-zinc-600">
-                            <h3 className="font-semibold text-white">{link.label}</h3>
-                            <p className="text-sm text-zinc-400 mt-1">{link.desc}</p>
-                        </Link>
+                        <Card key={i} className="bg-zinc-900/50 border-zinc-800 hover:border-zinc-700 transition-colors cursor-pointer group">
+                            <Link href={link.href} className="block p-6">
+                                <h3 className="font-semibold text-white group-hover:text-blue-400 transition-colors">{link.label}</h3>
+                                <p className="text-sm text-zinc-500 mt-1">{link.desc}</p>
+                            </Link>
+                        </Card>
                     ))}
                 </div>
             </div>

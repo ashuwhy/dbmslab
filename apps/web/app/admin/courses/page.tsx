@@ -2,6 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import { fetchWithAuth } from '@/lib/auth';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input } from '@/components/ui/input';
+import { Trash2 } from 'lucide-react';
 
 interface Course {
     course_id: number;
@@ -10,6 +19,7 @@ interface Course {
     university_name: string | null;
     program_name: string | null;
     enrollment_count: number;
+    instructor_names: string | null;
 }
 
 interface Instructor {
@@ -26,22 +36,30 @@ export default function AdminCoursesPage() {
     const [selectedInstructor, setSelectedInstructor] = useState<number | null>(null);
     const [message, setMessage] = useState('');
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const [coursesRes, instructorsRes] = await Promise.all([
-                    fetchWithAuth(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/admin/courses`),
-                    fetchWithAuth(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/admin/instructors`)
-                ]);
+    // Manage Instructors State
+    const [managingCourse, setManagingCourse] = useState<Course | null>(null);
+    const [assignedInstructors, setAssignedInstructors] = useState<Instructor[]>([]);
 
-                if (coursesRes.ok) setCourses(await coursesRes.json());
-                if (instructorsRes.ok) setInstructors(await instructorsRes.json());
-            } catch (error) {
-                console.error(error);
-            } finally {
-                setLoading(false);
-            }
-        };
+    // Edit Course State
+    const [editingDetailsCourse, setEditingDetailsCourse] = useState<Course | null>(null);
+
+    const fetchData = async () => {
+        try {
+            const [coursesRes, instructorsRes] = await Promise.all([
+                fetchWithAuth(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/admin/courses`),
+                fetchWithAuth(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/admin/instructors`)
+            ]);
+
+            if (coursesRes.ok) setCourses(await coursesRes.json());
+            if (instructorsRes.ok) setInstructors(await instructorsRes.json());
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchData();
     }, []);
 
@@ -52,6 +70,7 @@ export default function AdminCoursesPage() {
         try {
             const res = await fetchWithAuth(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/admin/courses/${selectedCourse}/assign-instructor`, {
                 method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ instructor_id: selectedInstructor, role: 'instructor' }),
             });
 
@@ -59,6 +78,7 @@ export default function AdminCoursesPage() {
                 setMessage('Instructor assigned successfully');
                 setSelectedCourse(null);
                 setSelectedInstructor(null);
+                fetchData();
             } else {
                 const err = await res.json();
                 setMessage(`Error: ${err.detail}`);
@@ -68,104 +88,273 @@ export default function AdminCoursesPage() {
         }
     };
 
+    const openManageInstructors = async (course: Course) => {
+        setManagingCourse(course);
+        try {
+            const res = await fetchWithAuth(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/admin/course-assignments/${course.course_id}`);
+            if (res.ok) {
+                setAssignedInstructors(await res.json());
+            }
+        } catch (error) {
+            console.error("Failed to fetch assignments", error);
+        }
+    };
+
+    const removeInstructor = async (instructorId: number) => {
+        if (!managingCourse) return;
+        try {
+            const res = await fetchWithAuth(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/admin/courses/${managingCourse.course_id}/instructors/${instructorId}`, {
+                method: 'DELETE'
+            });
+            if (res.ok) {
+                // Remove from local list
+                setAssignedInstructors(prev => prev.filter(i => i.instructor_id !== instructorId));
+                // Update main list to reflect changes in "Instructors" column
+                fetchData();
+            }
+        } catch (error) {
+            console.error("Failed to remove instructor", error);
+        }
+    };
+
+    const handleUpdateDetails = async () => {
+        if (!editingDetailsCourse) return;
+
+        try {
+            const res = await fetchWithAuth(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/admin/courses/${editingDetailsCourse.course_id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    course_name: editingDetailsCourse.course_name,
+                    duration_weeks: editingDetailsCourse.duration_weeks,
+                }),
+            });
+
+            if (res.ok) {
+                setMessage('Course updated successfully');
+                setEditingDetailsCourse(null);
+                fetchData(); // Refresh list
+            } else {
+                const err = await res.json();
+                setMessage(`Error: ${err.detail}`);
+            }
+        } catch {
+            setMessage('Failed to update course');
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[50vh]">
-                <div className="loading"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
             </div>
         );
     }
 
     return (
-        <div className="space-y-6">
-            <div className="section-header">
-                <h1 className="section-title">Course Management</h1>
-                <p className="section-description">View courses and assign instructors</p>
+        <div className="space-y-8">
+            <div className="space-y-2">
+                <h1 className="text-3xl font-bold tracking-tight text-white">Course Management</h1>
+                <p className="text-zinc-400">View courses and assign instructors</p>
             </div>
 
             {/* Assign Instructor */}
-            <div className="card">
-                <h3 className="text-lg font-semibold text-white mb-4">Assign Instructor to Course</h3>
-                <div className="grid gap-4 md:grid-cols-3">
-                    <div>
-                        <label className="block text-sm text-zinc-400 mb-2">Select Course</label>
-                        <select
-                            className="input"
-                            value={selectedCourse || ''}
-                            onChange={(e) => setSelectedCourse(Number(e.target.value) || null)}
-                        >
-                            <option value="">Choose a course...</option>
-                            {courses.map((c) => (
-                                <option key={c.course_id} value={c.course_id}>
-                                    {c.course_name}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-sm text-zinc-400 mb-2">Select Instructor</label>
-                        <select
-                            className="input"
-                            value={selectedInstructor || ''}
-                            onChange={(e) => setSelectedInstructor(Number(e.target.value) || null)}
-                        >
-                            <option value="">Choose an instructor...</option>
-                            {instructors.map((i) => (
-                                <option key={i.instructor_id} value={i.instructor_id}>
-                                    {i.full_name}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                    <div className="flex items-end">
-                        <button
+            <Card className="bg-zinc-900/50 border-zinc-800">
+                <CardHeader>
+                    <CardTitle>Assign Instructor to Course</CardTitle>
+                    <CardDescription>Select a course and an instructor to assign them.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid gap-6 md:grid-cols-3 items-end">
+                        <div className="space-y-2">
+                            <Label htmlFor="course">Select Course</Label>
+                            <select
+                                id="course"
+                                className="flex h-9 w-full rounded-none border border-input bg-black/20 px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm text-zinc-100"
+                                value={selectedCourse || ''}
+                                onChange={(e) => setSelectedCourse(Number(e.target.value) || null)}
+                            >
+                                <option value="" className="bg-zinc-900">Choose a course...</option>
+                                {courses.map((c) => (
+                                    <option key={c.course_id} value={c.course_id} className="bg-zinc-900">
+                                        {c.course_name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="instructor">Select Instructor</Label>
+                            <select
+                                id="instructor"
+                                className="flex h-9 w-full rounded-none border border-input bg-black/20 px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm text-zinc-100"
+                                value={selectedInstructor || ''}
+                                onChange={(e) => setSelectedInstructor(Number(e.target.value) || null)}
+                            >
+                                <option value="" className="bg-zinc-900">Choose an instructor...</option>
+                                {instructors.map((i) => (
+                                    <option key={i.instructor_id} value={i.instructor_id} className="bg-zinc-900">
+                                        {i.full_name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <Button
                             onClick={handleAssign}
                             disabled={!selectedCourse || !selectedInstructor}
-                            className="btn btn-primary w-full disabled:opacity-50"
+                            className="w-full"
                         >
                             Assign
-                        </button>
+                        </Button>
                     </div>
-                </div>
-                {message && (
-                    <p className={`mt-4 text-sm ${message.includes('Error') ? 'text-red-400' : 'text-green-400'}`}>
-                        {message}
-                    </p>
-                )}
-            </div>
+                    {message && (
+                        <p className={`mt-4 text-sm font-medium ${message.includes('Error') ? 'text-red-400' : 'text-green-400'}`}>
+                            {message}
+                        </p>
+                    )}
+                </CardContent>
+            </Card>
 
             {/* Courses List */}
-            <div>
-                <h3 className="text-lg font-semibold text-white mb-4">All Courses ({courses.length})</h3>
-                <div className="card p-0 overflow-hidden">
-                    <table className="data-table">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Course Name</th>
-                                <th>University</th>
-                                <th>Program</th>
-                                <th>Duration</th>
-                                <th>Enrollments</th>
-                            </tr>
-                        </thead>
-                        <tbody>
+            <Card className="bg-zinc-900/50 border-zinc-800">
+                <CardHeader>
+                    <CardTitle>All Courses</CardTitle>
+                    <CardDescription>Total courses: {courses.length}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow className="border-zinc-800 hover:bg-transparent">
+                                <TableHead className="w-[80px]">ID</TableHead>
+                                <TableHead>Course Name</TableHead>
+                                <TableHead>Instructors</TableHead>
+                                <TableHead>University</TableHead>
+                                <TableHead>Program</TableHead>
+                                <TableHead>Duration</TableHead>
+                                <TableHead className="text-right">Enrollments</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
                             {courses.map((course) => (
-                                <tr key={course.course_id}>
-                                    <td className="text-zinc-400">#{course.course_id}</td>
-                                    <td className="text-white font-medium">{course.course_name}</td>
-                                    <td className="text-zinc-400">{course.university_name || 'N/A'}</td>
-                                    <td className="text-zinc-400">{course.program_name || 'N/A'}</td>
-                                    <td className="text-zinc-400">{course.duration_weeks} weeks</td>
-                                    <td>
-                                        <span className="badge badge-primary">{course.enrollment_count}</span>
-                                    </td>
-                                </tr>
+                                <TableRow key={course.course_id} className="border-zinc-800 hover:bg-zinc-800/20">
+                                    <TableCell className="font-medium text-zinc-500">#{course.course_id}</TableCell>
+                                    <TableCell className="text-zinc-100 font-medium">{course.course_name}</TableCell>
+                                    <TableCell className="text-zinc-300">
+                                        {course.instructor_names ? (
+                                            <Badge
+                                                variant="outline"
+                                                className="border-zinc-700 bg-zinc-900/50 cursor-pointer hover:bg-zinc-800"
+                                                onClick={() => openManageInstructors(course)}
+                                            >
+                                                {course.instructor_names}
+                                            </Badge>
+                                        ) : (
+                                            <span
+                                                className="text-zinc-600 text-sm cursor-pointer hover:text-zinc-400"
+                                                onClick={() => openManageInstructors(course)}
+                                            >
+                                                Manage
+                                            </span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="text-zinc-400">{course.university_name || 'N/A'}</TableCell>
+                                    <TableCell className="text-zinc-400">{course.program_name || 'N/A'}</TableCell>
+                                    <TableCell className="text-zinc-400">{course.duration_weeks} weeks</TableCell>
+                                    <TableCell className="text-right">
+                                        <Badge variant="secondary">{course.enrollment_count}</Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setEditingDetailsCourse(course)}
+                                            className="h-7 px-3 text-xs border-zinc-700 hover:bg-zinc-800 text-zinc-300"
+                                        >
+                                            Edit
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
                             ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+
+            <Dialog open={!!managingCourse} onOpenChange={(open) => !open && setManagingCourse(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Manage Instructors</DialogTitle>
+                        <DialogDescription>
+                            Instructors assigned to <span className="text-white font-medium">{managingCourse?.course_name}</span>.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <ScrollArea className="h-[200px] w-full rounded-md border border-zinc-800 p-4 bg-zinc-900/50">
+                        {assignedInstructors.length === 0 ? (
+                            <div className="flex items-center justify-center h-full text-zinc-500 text-sm">
+                                No instructors assigned.
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                {assignedInstructors.map((instructor) => (
+                                    <div key={instructor.instructor_id} className="flex items-center justify-between p-2 rounded-none bg-zinc-900 border border-zinc-800">
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-medium text-zinc-100">{instructor.full_name}</span>
+                                            <span className="text-xs text-zinc-500">{instructor.email}</span>
+                                        </div>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-900/20"
+                                            onClick={() => removeInstructor(instructor.instructor_id)}
+                                        >
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </ScrollArea>
+                    <DialogFooter>
+                        <Button onClick={() => setManagingCourse(null)} className="w-full">Done</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={!!editingDetailsCourse} onOpenChange={(open) => !open && setEditingDetailsCourse(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Edit Course</DialogTitle>
+                        <DialogDescription>Edit course details.</DialogDescription>
+                    </DialogHeader>
+                    {editingDetailsCourse && (
+                        <div className="grid gap-4 py-4">
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="course_name" className="text-right">Name</Label>
+                                <Input
+                                    id="course_name"
+                                    value={editingDetailsCourse.course_name}
+                                    onChange={(e) => setEditingDetailsCourse({ ...editingDetailsCourse, course_name: e.target.value })}
+                                    className="col-span-3 bg-zinc-900 border-zinc-700"
+                                />
+                            </div>
+                            <div className="grid grid-cols-4 items-center gap-4">
+                                <Label htmlFor="duration" className="text-right">Weeks</Label>
+                                <Input
+                                    id="duration"
+                                    type="number"
+                                    value={editingDetailsCourse.duration_weeks}
+                                    onChange={(e) => setEditingDetailsCourse({ ...editingDetailsCourse, duration_weeks: parseInt(e.target.value) || 0 })}
+                                    className="col-span-3 bg-zinc-900 border-zinc-700"
+                                />
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setEditingDetailsCourse(null)} className="rounded-none border-zinc-700">Cancel</Button>
+                        <Button type="submit" onClick={handleUpdateDetails} className="rounded-none">Save changes</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

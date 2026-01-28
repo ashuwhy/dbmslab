@@ -123,7 +123,6 @@ class Student(Base):
     country = Column(String(50), nullable=False)
     category = Column(String(50))  # student/professional
     skill_level = Column(String(50))  # beginner/intermediate/advanced
-    email = Column(String(100), unique=True)  # Added for linking to AppUser
     
     # Relationships
     enrollments = relationship("Enrollment", back_populates="student")

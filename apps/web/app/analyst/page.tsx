@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { fetchWithAuth } from '@/lib/auth';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 
 interface Stats {
     total_courses: number;
@@ -99,7 +102,7 @@ export default function AnalystPage() {
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[50vh]">
-                <div className="loading"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
             </div>
         );
     }
@@ -108,162 +111,195 @@ export default function AnalystPage() {
 
     return (
         <div className="space-y-8">
-            <div className="section-header">
-                <h1 className="text-2xl font-bold text-white">Analytics Dashboard</h1>
-                <p className="text-zinc-400 mt-1">Platform statistics and insights</p>
+            <div className="space-y-2">
+                <h1 className="text-3xl font-bold tracking-tight text-white">Analytics Dashboard</h1>
+                <p className="text-zinc-400">Platform statistics and insights</p>
             </div>
 
             {/* Overview Stats */}
-            <div className="stats-grid">
-                <div className="card">
-                    <p className="card-header">Total Courses</p>
-                    <p className="card-value">{stats?.total_courses || 0}</p>
-                </div>
-                <div className="card">
-                    <p className="card-header">Total Students</p>
-                    <p className="card-value">{stats?.total_students || 0}</p>
-                </div>
-                <div className="card">
-                    <p className="card-header">Total Enrollments</p>
-                    <p className="card-value">{stats?.total_enrollments || 0}</p>
-                </div>
-                <div className="card">
-                    <p className="card-header">Avg Score</p>
-                    <p className="card-value">{stats?.average_score || 0}%</p>
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Card className="bg-zinc-900/50 border-zinc-800">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium text-zinc-400">Total Courses</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-white">{stats?.total_courses || 0}</div>
+                    </CardContent>
+                </Card>
+                <Card className="bg-zinc-900/50 border-zinc-800">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium text-zinc-400">Total Students</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-white">{stats?.total_students || 0}</div>
+                    </CardContent>
+                </Card>
+                <Card className="bg-zinc-900/50 border-zinc-800">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium text-zinc-400">Total Enrollments</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-white">{stats?.total_enrollments || 0}</div>
+                    </CardContent>
+                </Card>
+                <Card className="bg-zinc-900/50 border-zinc-800">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium text-zinc-400">Avg Score</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-white">{stats?.average_score || 0}%</div>
+                    </CardContent>
+                </Card>
             </div>
 
             {/* Highlights */}
             <div className="grid gap-4 md:grid-cols-2">
-                <div className="card">
-                    <p className="card-header">🏆 Most Popular Course</p>
-                    <p className="text-2xl font-bold text-white mt-2">{popularCourse?.course || 'N/A'}</p>
-                    <p className="text-sm text-zinc-500 mt-1">{popularCourse?.enrollments || 0} enrollments</p>
-                </div>
-                <div className="card">
-                    <p className="card-header">⭐ Top Indian AI Student</p>
-                    <p className="text-2xl font-bold text-white mt-2">{topStudent?.name || 'N/A'}</p>
-                    <p className="text-sm text-zinc-500 mt-1">Average: {topStudent?.avg_score || 0}%</p>
-                </div>
+                <Card className="bg-zinc-900/50 border-zinc-800">
+                    <CardHeader>
+                        <CardTitle className="text-sm font-medium text-zinc-400">🏆 Most Popular Course</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-2xl font-bold text-white">{popularCourse?.course || 'N/A'}</p>
+                        <p className="text-sm text-zinc-500 mt-1">{popularCourse?.enrollments || 0} enrollments</p>
+                    </CardContent>
+                </Card>
+                <Card className="bg-zinc-900/50 border-zinc-800">
+                    <CardHeader>
+                        <CardTitle className="text-sm font-medium text-zinc-400">⭐ Top Indian AI Student</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-2xl font-bold text-white">{topStudent?.name || 'N/A'}</p>
+                        <p className="text-sm text-zinc-500 mt-1">Average: {topStudent?.avg_score || 0}%</p>
+                    </CardContent>
+                </Card>
             </div>
 
             {/* Charts Row */}
             <div className="grid gap-6 md:grid-cols-2">
                 {/* Enrollments Bar Chart */}
-                <div className="card">
-                    <h3 className="text-sm font-medium text-zinc-400 mb-4">Enrollments per Course</h3>
-                    <div className="space-y-3">
+                <Card className="bg-zinc-900/50 border-zinc-800">
+                    <CardHeader>
+                        <CardTitle className="text-lg">Enrollments per Course</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
                         {enrollments.slice(0, 6).map((e) => (
                             <div key={e.course_id}>
                                 <div className="flex justify-between text-sm mb-1">
                                     <span className="text-white truncate max-w-[200px]">{e.title}</span>
                                     <span className="text-zinc-500">{e.count}</span>
                                 </div>
-                                <div className="progress-bar">
+                                <div className="h-2 w-full bg-zinc-800 rounded-none overflow-hidden">
                                     <div
-                                        className="progress-bar-fill"
+                                        className="h-full bg-white"
                                         style={{ width: `${(e.count / maxEnrollment) * 100}%` }}
                                     ></div>
                                 </div>
                             </div>
                         ))}
-                    </div>
-                </div>
+                    </CardContent>
+                </Card>
 
                 {/* Average Scores */}
-                <div className="card">
-                    <h3 className="text-sm font-medium text-zinc-400 mb-4">Average Scores by Course</h3>
-                    <div className="space-y-3">
+                <Card className="bg-zinc-900/50 border-zinc-800">
+                    <CardHeader>
+                        <CardTitle className="text-lg">Average Scores by Course</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
                         {avgScores.slice(0, 6).map((e, i) => (
                             <div key={i} className="flex justify-between items-center">
                                 <span className="text-sm text-white truncate max-w-[200px]">{e.course}</span>
-                                <span className={`badge ${e.avg_score >= 80 ? 'badge-success' : e.avg_score >= 60 ? 'badge-warning' : 'badge-danger'}`}>
+                                <Badge variant={e.avg_score >= 80 ? 'default' : e.avg_score >= 60 ? 'secondary' : 'destructive'}>
                                     {e.avg_score}%
-                                </span>
+                                </Badge>
                             </div>
                         ))}
-                    </div>
-                </div>
+                    </CardContent>
+                </Card>
             </div>
 
             {/* Distribution Charts */}
             <div className="grid gap-6 md:grid-cols-3">
-                {/* By University */}
-                <div className="card">
-                    <h3 className="text-sm font-medium text-zinc-400 mb-4">Courses by University</h3>
-                    <div className="space-y-2">
+                <Card className="bg-zinc-900/50 border-zinc-800">
+                    <CardHeader>
+                        <CardTitle className="text-lg">Universities</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
                         {byUniversity.map((u, i) => (
-                            <div key={i} className="flex justify-between">
-                                <span className="text-sm text-white">{u.university}</span>
-                                <span className="text-sm text-zinc-500">{u.count}</span>
+                            <div key={i} className="flex justify-between text-sm">
+                                <span className="text-white">{u.university}</span>
+                                <span className="text-zinc-500">{u.count}</span>
                             </div>
                         ))}
-                    </div>
-                </div>
+                    </CardContent>
+                </Card>
 
-                {/* By Country */}
-                <div className="card">
-                    <h3 className="text-sm font-medium text-zinc-400 mb-4">Students by Country</h3>
-                    <div className="space-y-2">
+                <Card className="bg-zinc-900/50 border-zinc-800">
+                    <CardHeader>
+                        <CardTitle className="text-lg">Countries</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
                         {byCountry.map((c, i) => (
-                            <div key={i} className="flex justify-between">
-                                <span className="text-sm text-white">{c.country}</span>
-                                <span className="text-sm text-zinc-500">{c.count}</span>
+                            <div key={i} className="flex justify-between text-sm">
+                                <span className="text-white">{c.country}</span>
+                                <span className="text-zinc-500">{c.count}</span>
                             </div>
                         ))}
-                    </div>
-                </div>
+                    </CardContent>
+                </Card>
 
-                {/* By Skill Level */}
-                <div className="card">
-                    <h3 className="text-sm font-medium text-zinc-400 mb-4">Skill Level Distribution</h3>
-                    <div className="space-y-2">
+                <Card className="bg-zinc-900/50 border-zinc-800">
+                    <CardHeader>
+                        <CardTitle className="text-lg">Skill Levels</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
                         {bySkill.map((s, i) => (
-                            <div key={i} className="flex justify-between">
-                                <span className="text-sm text-white capitalize">{s.skill_level}</span>
-                                <span className="text-sm text-zinc-500">{s.count}</span>
+                            <div key={i} className="flex justify-between text-sm">
+                                <span className="text-white capitalize">{s.skill_level}</span>
+                                <span className="text-zinc-500">{s.count}</span>
                             </div>
                         ))}
-                    </div>
-                </div>
+                    </CardContent>
+                </Card>
             </div>
 
             {/* Top Courses Table */}
-            <div>
-                <h3 className="text-lg font-semibold text-white mb-4">Top 5 Courses</h3>
-                <div className="card p-0 overflow-hidden">
-                    <table className="data-table">
-                        <thead>
-                            <tr>
-                                <th>Rank</th>
-                                <th>Course Name</th>
-                                <th>Enrollments</th>
-                                <th>Avg Score</th>
-                            </tr>
-                        </thead>
-                        <tbody>
+            <Card className="bg-zinc-900/50 border-zinc-800">
+                <CardHeader>
+                    <CardTitle className="text-lg">Top 5 Courses</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow className="border-zinc-800 hover:bg-transparent">
+                                <TableHead className="w-[80px]">Rank</TableHead>
+                                <TableHead>Course Name</TableHead>
+                                <TableHead>Enrollments</TableHead>
+                                <TableHead className="text-right">Avg Score</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
                             {topCourses.map((course, i) => (
-                                <tr key={course.course_id}>
-                                    <td className="text-zinc-400">#{i + 1}</td>
-                                    <td className="text-white font-medium">{course.course_name}</td>
-                                    <td>
-                                        <span className="badge badge-primary">{course.enrollments}</span>
-                                    </td>
-                                    <td>
+                                <TableRow key={course.course_id} className="border-zinc-800 hover:bg-zinc-800/20">
+                                    <TableCell className="font-medium text-zinc-500">#{i + 1}</TableCell>
+                                    <TableCell className="text-white font-medium">{course.course_name}</TableCell>
+                                    <TableCell>
+                                        <Badge variant="secondary">{course.enrollments}</Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right">
                                         {course.avg_score ? (
-                                            <span className={`badge ${course.avg_score >= 80 ? 'badge-success' : 'badge-warning'}`}>
+                                            <Badge variant={course.avg_score >= 80 ? 'default' : 'secondary'}>
                                                 {course.avg_score}%
-                                            </span>
+                                            </Badge>
                                         ) : (
                                             <span className="text-zinc-500">N/A</span>
                                         )}
-                                    </td>
-                                </tr>
+                                    </TableCell>
+                                </TableRow>
                             ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
         </div>
     );
 }

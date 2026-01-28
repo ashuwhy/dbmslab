@@ -2,6 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { fetchWithAuth } from '@/lib/auth';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
 
 interface User {
     id: number;
@@ -38,6 +44,7 @@ export default function AdminUsersPage() {
         try {
             const res = await fetchWithAuth(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/admin/users`, {
                 method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password, role }),
             });
 
@@ -71,116 +78,129 @@ export default function AdminUsersPage() {
     };
 
     const getRoleBadge = (role: string) => {
-        const styles: Record<string, string> = {
-            admin: 'badge-danger',
-            instructor: 'badge-primary',
-            student: 'badge-success',
-            analyst: 'badge-warning',
+        const variants: Record<string, "default" | "destructive" | "secondary" | "outline"> = {
+            admin: 'destructive',
+            instructor: 'secondary',
+            student: 'default',
+            analyst: 'outline',
         };
-        return styles[role] || 'badge-primary';
+        return variants[role] || 'default';
     };
 
     return (
-        <div className="space-y-6">
-            <div className="section-header">
-                <h1 className="section-title">User Management</h1>
-                <p className="section-description">Create and manage user accounts</p>
+        <div className="space-y-8">
+            <div className="space-y-2">
+                <h1 className="text-3xl font-bold tracking-tight text-white">User Management</h1>
+                <p className="text-zinc-400">Create and manage user accounts</p>
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-3">
+            <div className="grid gap-8 lg:grid-cols-3">
                 {/* Create User Form */}
-                <div className="card lg:col-span-1">
-                    <h3 className="text-lg font-semibold text-white mb-4">Create User</h3>
-                    <form onSubmit={handleCreateUser} className="space-y-4">
-                        <div>
-                            <label className="block text-sm text-zinc-400 mb-2">Email</label>
-                            <input
-                                type="email"
-                                required
-                                className="input"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                placeholder="user@example.com"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm text-zinc-400 mb-2">Password</label>
-                            <input
-                                type="password"
-                                required
-                                className="input"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                placeholder="••••••••"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm text-zinc-400 mb-2">Role</label>
-                            <select
-                                className="input"
-                                value={role}
-                                onChange={(e) => setRole(e.target.value)}
-                            >
-                                <option value="student">Student</option>
-                                <option value="instructor">Instructor</option>
-                                <option value="admin">Admin</option>
-                                <option value="analyst">Analyst</option>
-                            </select>
-                        </div>
-                        <button type="submit" className="btn btn-primary w-full">
-                            Create User
-                        </button>
-                    </form>
-                    {message && (
-                        <p className={`mt-4 text-sm ${message.includes('Error') ? 'text-red-400' : 'text-green-400'}`}>
-                            {message}
-                        </p>
-                    )}
-                </div>
+                <Card className="lg:col-span-1 h-fit bg-zinc-900/50 border-zinc-800">
+                    <CardHeader>
+                        <CardTitle>Create User</CardTitle>
+                        <CardDescription>Add a new user to the system</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <form onSubmit={handleCreateUser} className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="email">Email</Label>
+                                <Input
+                                    id="email"
+                                    type="email"
+                                    required
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    placeholder="user@example.com"
+                                    className="bg-black/20"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="password">Password</Label>
+                                <Input
+                                    id="password"
+                                    type="password"
+                                    required
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    placeholder="••••••••"
+                                    className="bg-black/20"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="role">Role</Label>
+                                <select
+                                    id="role"
+                                    className="flex h-9 w-full rounded-none border border-input bg-black/20 px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm text-zinc-100"
+                                    value={role}
+                                    onChange={(e) => setRole(e.target.value)}
+                                >
+                                    <option value="student" className="bg-zinc-900">Student</option>
+                                    <option value="instructor" className="bg-zinc-900">Instructor</option>
+                                    <option value="admin" className="bg-zinc-900">Admin</option>
+                                    <option value="analyst" className="bg-zinc-900">Analyst</option>
+                                </select>
+                            </div>
+                            <Button type="submit" className="w-full">
+                                Create User
+                            </Button>
+                        </form>
+                        {message && (
+                            <p className={`mt-4 text-sm font-medium ${message.includes('Error') ? 'text-red-400' : 'text-green-400'}`}>
+                                {message}
+                            </p>
+                        )}
+                    </CardContent>
+                </Card>
 
                 {/* Users List */}
-                <div className="lg:col-span-2">
-                    <h3 className="text-lg font-semibold text-white mb-4">All Users ({users.length})</h3>
-                    {loading ? (
-                        <div className="flex justify-center py-8">
-                            <div className="loading"></div>
-                        </div>
-                    ) : (
-                        <div className="card p-0 overflow-hidden">
-                            <table className="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Email</th>
-                                        <th>Role</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
+                <Card className="lg:col-span-2 bg-zinc-900/50 border-zinc-800">
+                    <CardHeader>
+                        <CardTitle>All Users</CardTitle>
+                        <CardDescription>Total users: {users.length}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {loading ? (
+                            <div className="flex justify-center py-8">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                            </div>
+                        ) : (
+                            <Table>
+                                <TableHeader>
+                                    <TableRow className="border-zinc-800 hover:bg-transparent">
+                                        <TableHead className="w-[80px]">ID</TableHead>
+                                        <TableHead>Email</TableHead>
+                                        <TableHead>Role</TableHead>
+                                        <TableHead className="text-right">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
                                     {users.map((user) => (
-                                        <tr key={user.id}>
-                                            <td className="text-zinc-400">#{user.id}</td>
-                                            <td className="text-white">{user.email}</td>
-                                            <td>
-                                                <span className={`badge ${getRoleBadge(user.role)}`}>
+                                        <TableRow key={user.id} className="border-zinc-800 hover:bg-zinc-800/20">
+                                            <TableCell className="font-medium text-zinc-500">#{user.id}</TableCell>
+                                            <TableCell className="text-zinc-100">{user.email}</TableCell>
+                                            <TableCell>
+                                                <Badge variant={getRoleBadge(user.role)}>
                                                     {user.role}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <button
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <Button
+                                                    variant="destructive"
+                                                    size="sm"
                                                     onClick={() => handleDeleteUser(user.id)}
-                                                    className="btn btn-danger text-xs py-1 px-2"
+                                                    className="h-7 px-3 text-xs"
                                                 >
                                                     Delete
-                                                </button>
-                                            </td>
-                                        </tr>
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
                                     ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </div>
+                                </TableBody>
+                            </Table>
+                        )}
+                    </CardContent>
+                </Card>
             </div>
         </div>
     );

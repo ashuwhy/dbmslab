@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { fetchWithAuth } from '@/lib/auth';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 interface Enrollment {
     course_id: number;
@@ -44,74 +47,88 @@ export default function StudentDashboard() {
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[50vh]">
-                <div className="loading"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
             </div>
         );
     }
 
     return (
         <div className="space-y-8">
-            <div className="section-header">
-                <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-                <p className="text-zinc-400 mt-1">Welcome back! Track your learning progress.</p>
+            <div className="space-y-2">
+                <h1 className="text-3xl font-bold tracking-tight text-white">Dashboard</h1>
+                <p className="text-zinc-400">Welcome back! Track your learning progress.</p>
             </div>
 
             {/* Stats Cards */}
-            <div className="stats-grid">
-                <div className="card">
-                    <p className="card-header">Enrolled Courses</p>
-                    <p className="card-value">{stats?.total_enrollments || 0}</p>
-                </div>
-                <div className="card">
-                    <p className="card-header">Completed</p>
-                    <p className="card-value">{stats?.courses_completed || 0}</p>
-                </div>
-                <div className="card">
-                    <p className="card-header">Average Score</p>
-                    <p className="card-value">{stats?.avg_score ? `${stats.avg_score}%` : 'N/A'}</p>
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className="bg-zinc-900/50 border-zinc-800">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium text-zinc-400">Enrolled Courses</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-white">{stats?.total_enrollments || 0}</div>
+                    </CardContent>
+                </Card>
+                <Card className="bg-zinc-900/50 border-zinc-800">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium text-zinc-400">Completed</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-white">{stats?.courses_completed || 0}</div>
+                    </CardContent>
+                </Card>
+                <Card className="bg-zinc-900/50 border-zinc-800">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium text-zinc-400">Average Score</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-white">{stats?.avg_score ? `${stats.avg_score}%` : 'N/A'}</div>
+                    </CardContent>
+                </Card>
             </div>
 
             {/* Quick Actions */}
-            <div className="flex gap-3">
-                <Link href="/student/courses" className="btn btn-primary">
-                    Browse Courses
-                </Link>
+            <div>
+                <Button asChild>
+                    <Link href="/student/courses">Browse Courses</Link>
+                </Button>
             </div>
 
             {/* My Enrollments */}
-            <div>
-                <h2 className="text-lg font-semibold text-white mb-4">My Enrollments</h2>
+            <div className="space-y-4">
+                <h2 className="text-xl font-semibold text-white tracking-tight">My Enrollments</h2>
 
                 {enrollments.length === 0 ? (
-                    <div className="card empty-state">
-                        <p>You haven&apos;t enrolled in any courses yet.</p>
-                        <Link href="/student/courses" className="text-blue-400 hover:underline mt-2 inline-block">
-                            Browse available courses →
-                        </Link>
-                    </div>
+                    <Card className="bg-zinc-900/50 border-zinc-800 border-dashed">
+                        <CardContent className="flex flex-col items-center justify-center py-8 text-center">
+                            <p className="text-zinc-500 mb-4">You haven&apos;t enrolled in any courses yet.</p>
+                            <Button variant="link" asChild>
+                                <Link href="/student/courses">Browse available courses →</Link>
+                            </Button>
+                        </CardContent>
+                    </Card>
                 ) : (
-                    <div className="space-y-3">
+                    <div className="grid gap-3">
                         {enrollments.map((enrollment) => (
-                            <div key={enrollment.course_id} className="list-item">
-                                <div className="flex-1">
-                                    <p className="font-medium text-white">{enrollment.course_name}</p>
-                                    <p className="text-sm text-zinc-500">
-                                        Enrolled: {new Date(enrollment.enroll_date).toLocaleDateString()}
-                                    </p>
-                                </div>
-                                <div className="text-right">
-                                    {enrollment.evaluation_score !== null ? (
-                                        <div>
-                                            <span className={`badge ${enrollment.evaluation_score >= 70 ? 'badge-success' : enrollment.evaluation_score >= 50 ? 'badge-warning' : 'badge-danger'}`}>
+                            <Card key={enrollment.course_id} className="bg-zinc-900/50 border-zinc-800">
+                                <CardContent className="flex items-center justify-between p-4">
+                                    <div>
+                                        <p className="font-semibold text-white">{enrollment.course_name}</p>
+                                        <p className="text-sm text-zinc-500">
+                                            Enrolled: {new Date(enrollment.enroll_date).toLocaleDateString()}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        {enrollment.evaluation_score !== null ? (
+                                            <Badge variant={enrollment.evaluation_score >= 70 ? 'default' : enrollment.evaluation_score >= 50 ? 'secondary' : 'destructive'}>
                                                 Score: {enrollment.evaluation_score}%
-                                            </span>
-                                        </div>
-                                    ) : (
-                                        <span className="badge badge-primary">In Progress</span>
-                                    )}
-                                </div>
-                            </div>
+                                            </Badge>
+                                        ) : (
+                                            <Badge variant="outline">In Progress</Badge>
+                                        )}
+                                    </div>
+                                </CardContent>
+                            </Card>
                         ))}
                     </div>
                 )}

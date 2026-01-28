@@ -37,6 +37,7 @@ class CourseResponse(BaseModel):
     university_name: Optional[str] = None
     program_name: Optional[str] = None
     enrollment_count: int = 0
+    instructor_names: Optional[str] = None
 
 class InstructorResponse(BaseModel):
     instructor_id: int
@@ -56,7 +57,25 @@ class DashboardStats(BaseModel):
     total_courses: int
     total_students: int
     total_instructors: int
+    total_instructors: int
     total_enrollments: int
+
+class StudentUpdateRequest(BaseModel):
+    full_name: Optional[str] = None
+    email: Optional[str] = None
+    country: Optional[str] = None
+    age: Optional[int] = None
+    skill_level: Optional[str] = None
+
+class InstructorUpdateRequest(BaseModel):
+    full_name: Optional[str] = None
+    email: Optional[str] = None
+
+class CourseUpdateRequest(BaseModel):
+    course_name: Optional[str] = None
+    duration_weeks: Optional[int] = None
+    university_id: Optional[int] = None
+    program_id: Optional[int] = None
 
 # Endpoints
 @router.get("/stats", response_model=DashboardStats)
@@ -113,17 +132,20 @@ async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.get("/courses", response_model=List[CourseResponse])
 async def list_courses(db: AsyncSession = Depends(get_db)):
-    """List all courses with enrollment counts."""
+    """List all courses with enrollment counts and assigned instructors."""
     stmt = (
         select(
             Course,
             University.name.label("university_name"),
             Program.program_name,
-            func.count(Enrollment.student_id).label("enrollment_count")
+            func.count(func.distinct(Enrollment.student_id)).label("enrollment_count"),
+            func.string_agg(func.distinct(Instructor.full_name), ', ').label("instructor_names")
         )
         .outerjoin(University, Course.university_id == University.university_id)
         .outerjoin(Program, Course.program_id == Program.program_id)
         .outerjoin(Enrollment, Course.course_id == Enrollment.course_id)
+        .outerjoin(TeachingAssignment, Course.course_id == TeachingAssignment.course_id)
+        .outerjoin(Instructor, TeachingAssignment.instructor_id == Instructor.instructor_id)
         .group_by(Course.course_id, University.name, Program.program_name)
     )
     result = await db.execute(stmt)
@@ -136,7 +158,8 @@ async def list_courses(db: AsyncSession = Depends(get_db)):
             duration_weeks=row[0].duration_weeks,
             university_name=row[1],
             program_name=row[2],
-            enrollment_count=row[3] or 0
+            enrollment_count=row[3] or 0,
+            instructor_names=row[4]
         ))
     return courses
 
@@ -246,3 +269,93 @@ async def get_course_instructors(course_id: int, db: AsyncSession = Depends(get_
     )
     result = await db.execute(stmt)
     return result.scalars().all()
+
+@router.put("/students/{student_id}")
+async def update_student(
+    student_id: int,
+    student_update: StudentUpdateRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """Update student details."""
+    result = await db.execute(select(Student).where(Student.student_id == student_id))
+    student = result.scalar_one_or_none()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+
+    if student_update.full_name is not None:
+        student.full_name = student_update.full_name
+    if student_update.email is not None:
+        student.email = student_update.email
+    if student_update.country is not None:
+        student.country = student_update.country
+    if student_update.age is not None:
+        student.age = student_update.age
+    if student_update.skill_level is not None:
+        student.skill_level = student_update.skill_level
+
+    await db.commit()
+    await db.refresh(student)
+    return {"message": "Student updated successfully", "student": {
+        "student_id": student.student_id,
+        "full_name": student.full_name,
+        "email": student.email,
+        "country": student.country,
+        "age": student.age,
+        "skill_level": student.skill_level
+    }}
+
+@router.put("/courses/{course_id}")
+async def update_course(
+    course_id: int,
+    course_update: CourseUpdateRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """Update course details."""
+    result = await db.execute(select(Course).where(Course.course_id == course_id))
+    course = result.scalar_one_or_none()
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+
+    if course_update.course_name is not None:
+        course.course_name = course_update.course_name
+    if course_update.duration_weeks is not None:
+        course.duration_weeks = course_update.duration_weeks
+    if course_update.university_id is not None:
+        course.university_id = course_update.university_id
+    if course_update.program_id is not None:
+        course.program_id = course_update.program_id
+
+    try:
+        await db.commit()
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+        
+    await db.refresh(course)
+    return {"message": "Course updated successfully"}
+
+@router.put("/instructors/{instructor_id}")
+async def update_instructor(
+    instructor_id: int,
+    instructor_update: InstructorUpdateRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """Update instructor details."""
+    result = await db.execute(select(Instructor).where(Instructor.instructor_id == instructor_id))
+    instructor = result.scalar_one_or_none()
+    if not instructor:
+        raise HTTPException(status_code=404, detail="Instructor not found")
+
+    if instructor_update.full_name is not None:
+        instructor.full_name = instructor_update.full_name
+    if instructor_update.email is not None:
+        instructor.email = instructor_update.email
+
+    try:
+        await db.commit()
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+
+    await db.refresh(instructor)
+    return {"message": "Instructor updated successfully"}
