@@ -39,9 +39,12 @@ Major tables used:
 ### 4. Admin Module
 
 - **User Management**: Create system users with specific roles.
+  - **User-Student Synchronization**: Automatically creates a linked `Student` profile when a new user with the "Student" role is created, ensuring consistency between auth and domain tables.
+  - **Validation**: Enforces age restrictions (must be >= 13) and required fields for student creation.
 - **Course Assignment**: Assign instructors to courses.
 - **Student Management**: Cascade delete students and their enrollments.
 - **Data Editing**: Update details for Courses and Instructors via modal dialogs.
+- **Navigation (UX)**: Dynamic Navbar with role-based badges (Admin=Red, Student=Green, etc.) and real-time login/logout state updates.
 
 ### 5. Analyst Module
 
