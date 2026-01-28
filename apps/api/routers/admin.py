@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
-from ..database import get_db
-from ..models import AppUser, TeachingAssignment, Student, Enrollment
-from ..dependencies import RoleChecker
-from ..routers.auth import get_password_hash
+from database import get_db
+from models import AppUser, TeachingAssignment, Student, Enrollment
+from dependencies import RoleChecker
+from routers.auth import get_password_hash
 from pydantic import BaseModel
 from typing import Optional
 

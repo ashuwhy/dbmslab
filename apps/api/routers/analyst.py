@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc
-from ..database import get_db
-from ..models import Course, Enrollment, Student
-from ..dependencies import RoleChecker
+from database import get_db
+from models import Course, Enrollment, Student
+from dependencies import RoleChecker
 
 router = APIRouter(
     prefix="/analytics",

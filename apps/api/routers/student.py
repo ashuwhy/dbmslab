@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, and_
 from typing import List, Optional
-from ..database import get_db
-from ..models import Course, Enrollment, Student, AppUser
-from ..dependencies import get_current_user, RoleChecker
+from database import get_db
+from models import Course, Enrollment, Student, AppUser
+from dependencies import get_current_user, RoleChecker
 from pydantic import BaseModel
 
 router = APIRouter(

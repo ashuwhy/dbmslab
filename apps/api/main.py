@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import auth, student, instructor, admin, analyst
+from routers import auth, student, instructor, admin, analyst
 
 app = FastAPI(title="Assignment IV API", version="1.0.0")
 

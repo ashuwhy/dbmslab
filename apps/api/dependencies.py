@@ -4,9 +4,9 @@ from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 import os
-from .database import get_db
-from .models import AppUser
-from .schemas import TokenData
+from database import get_db
+from models import AppUser
+from schemas import TokenData
 from sqlalchemy import select
 
 SECRET_KEY = os.getenv("SECRET_KEY", "dev_secret")

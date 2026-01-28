@@ -5,10 +5,10 @@ from datetime import timedelta, datetime
 from typing import Annotated
 from jose import jwt
 from passlib.context import CryptContext
-from ..database import get_db
-from ..models import AppUser
-from ..schemas import UserCreate, UserResponse, Token, UserLogin
-from ..dependencies import get_current_user, RoleChecker, SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
+from database import get_db
+from models import AppUser
+from schemas import UserCreate, UserResponse, Token, UserLogin
+from dependencies import get_current_user, RoleChecker, SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 
 router = APIRouter(
     prefix="/auth",
