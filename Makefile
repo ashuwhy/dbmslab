@@ -3,7 +3,7 @@
 install: setup-api setup-web
 
 setup-api:
-	cd apps/api && python3 -m venv venv && . venv/bin/activate && pip install -r requirements.txt
+	cd apps/api && python3.12 -m venv venv && . venv/bin/activate && pip install -r requirements.txt
 
 setup-web:
 	cd apps/web && npm install
