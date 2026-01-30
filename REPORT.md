@@ -4,10 +4,10 @@
 **Members:**
 
 - Ashutosh Sharma (23CS10005)
-- [Member 2 Name] ([Roll No])
-- [Member 3 Name] ([Roll No])
-- [Member 4 Name] ([Roll No])
-- [Member 5 Name] ([Roll No])
+- Sujal Anil Kaware (23CS30056)
+- Parag Mahadeo Chimankar (23CS10049)
+- Kshetrimayum Abo (23CS30029)
+- Kartik Pandey (23CS30026)
 
 ## Table Schema
 

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DBMS Lab – Assignment IV Submission</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'IBM Plex Sans', system-ui, sans-serif;
+      font-size: 11pt;
+      line-height: 1.5;
+      color: #1a1a1a;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 2rem 2.5rem;
+      background: #fff;
+    }
+    @media print {
+      body { padding: 1rem 1.5rem; }
+      .no-print { display: none; }
+      a { color: #000; text-decoration: none; }
+      h1, h2, h3 { page-break-after: avoid; }
+      table { page-break-inside: avoid; }
+    }
+
+    h1 {
+      font-family: 'Source Serif 4', Georgia, serif;
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin: 0 0 0.5rem 0;
+      border-bottom: 2px solid #1a1a1a;
+      padding-bottom: 0.5rem;
+    }
+    h2 {
+      font-family: 'Source Serif 4', Georgia, serif;
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 1.75rem 0 0.75rem 0;
+    }
+    h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin: 1.25rem 0 0.5rem 0;
+    }
+    p { margin: 0.5rem 0; }
+    ul, ol { margin: 0.5rem 0; padding-left: 1.5rem; }
+    li { margin: 0.25rem 0; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0.75rem 0;
+      font-size: 10pt;
+    }
+    th, td {
+      border: 1px solid #333;
+      padding: 0.4rem 0.6rem;
+      text-align: left;
+    }
+    th { background: #f0f0f0; font-weight: 600; }
+    code {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.9em;
+      background: #f5f5f5;
+      padding: 0.1em 0.3em;
+      border-radius: 3px;
+    }
+    .meta {
+      color: #555;
+      font-size: 10pt;
+      margin-bottom: 1.5rem;
+    }
+    .section { margin-bottom: 1.5rem; }
+  </style>
+</head>
+<body>
+  <p class="meta">DBMS Lab – Assignment IV | Student Academic Management System</p>
+
+  <h1>Assignment IV – Submission Document</h1>
+  <p>This document describes the group, schema design, and technology stack for the Student Academic Management System (DBMS Lab Assignment IV).</p>
+
+  <!-- 1. Group Name and Members -->
+  <div class="section">
+    <h2>1. Group Name and Members</h2>
+    <p><strong>Group Name:</strong> Index Corruption</p>
+    <p><strong>Members:</strong></p>
+    <ul>
+      <li>Ashutosh Sharma (23CS10005)</li>
+      <li>Sujal Anil Kaware (23CS30056)</li>
+      <li>Parag Mahadeo Chimankar (23CS10049)</li>
+      <li>Kshetrimayum Abo (23CS30029)</li>
+      <li>Kartik Pandey (23CS30026)</li>
+    </ul>
+  </div>
+
+  <!-- 2. Schema Design -->
+  <div class="section">
+    <h2>2. Schema Design</h2>
+    <p>The system uses a PostgreSQL database with the following tables. The schema supports universities, programs, courses, students, instructors, enrollments, teaching assignments, content items, and role-based access control.</p>
+
+    <h3>2.1 RBAC and Users</h3>
+    <table>
+      <thead>
+        <tr><th>Table</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>app_user</code></td><td>Roles-based access control: id (PK), email (unique), password_hash, role (admin/instructor/student/analyst), created_at. Links to <code>student.email</code> or <code>instructor.email</code>.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>2.2 Core Domain Tables</h3>
+    <table>
+      <thead>
+        <tr><th>Table</th><th>Key Columns</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>university</code></td><td>university_id (PK), name (unique), country</td></tr>
+        <tr><td><code>program</code></td><td>program_id (PK), program_name, program_type, duration_weeks_or_months</td></tr>
+        <tr><td><code>course</code></td><td>course_id (PK), course_name (unique), duration_weeks, university_id (FK), program_id (FK), textbook_id (FK)</td></tr>
+        <tr><td><code>textbook</code></td><td>textbook_id (PK), title, isbn (unique), url</td></tr>
+        <tr><td><code>topic</code></td><td>topic_id (PK), topic_name (unique)</td></tr>
+        <tr><td><code>course_topic</code></td><td>course_id (FK, PK), topic_id (FK, PK)</td></tr>
+      </tbody>
+    </table>
+
+    <h3>2.3 People and Assignments</h3>
+    <table>
+      <thead>
+        <tr><th>Table</th><th>Key Columns</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>student</code></td><td>student_id (PK), email (unique), full_name, age (≥13), country, category, skill_level</td></tr>
+        <tr><td><code>instructor</code></td><td>instructor_id (PK), full_name, email (unique)</td></tr>
+        <tr><td><code>enrollment</code></td><td>student_id (FK, PK), course_id (FK, PK), enroll_date, evaluation_score</td></tr>
+        <tr><td><code>teaching_assignment</code></td><td>instructor_id (FK, PK), course_id (FK, PK), role</td></tr>
+        <tr><td><code>content_item</code></td><td>content_id (PK), course_id (FK), content_type, title, url</td></tr>
+      </tbody>
+    </table>
+
+    <h3>2.4 Relationships (Summary)</h3>
+    <ul>
+      <li><strong>Course</strong> belongs to one University and one Program; has one Textbook; many ContentItems; many Enrollments; many TeachingAssignments; many Topics via <code>course_topic</code>.</li>
+      <li><strong>Student</strong> has many Enrollments; email links to <code>app_user</code> for login.</li>
+      <li><strong>Instructor</strong> has many TeachingAssignments; email links to <code>app_user</code> for login.</li>
+      <li><strong>Enrollment</strong> is a many-to-many between Student and Course with enroll_date and evaluation_score.</li>
+      <li><strong>Teaching assignment</strong> is a many-to-many between Instructor and Course with role.</li>
+    </ul>
+  </div>
+
+  <!-- 3. Languages and Stack -->
+  <div class="section">
+    <h2>3. Languages and Technology Stack</h2>
+
+    <h3>3.1 Overview</h3>
+    <ul>
+      <li><strong>Frontend:</strong> Next.js (App Router), React, TypeScript</li>
+      <li><strong>Backend:</strong> FastAPI (Python 3.11+)</li>
+      <li><strong>Database:</strong> PostgreSQL</li>
+      <li><strong>Build/Tooling:</strong> Make, uv (or pip), npm</li>
+    </ul>
+
+    <h3>3.2 Backend (API)</h3>
+    <ul>
+      <li><strong>Language:</strong> Python 3.11+</li>
+      <li><strong>Framework:</strong> FastAPI</li>
+      <li><strong>ORM / DB:</strong> SQLAlchemy 2.x (async), asyncpg (PostgreSQL driver)</li>
+      <li><strong>Validation & settings:</strong> Pydantic, pydantic-settings</li>
+      <li><strong>Auth:</strong> JWT (python-jose), password hashing (passlib/bcrypt)</li>
+      <li><strong>Server:</strong> Uvicorn</li>
+    </ul>
+
+    <h3>3.3 Frontend (Web)</h3>
+    <ul>
+      <li><strong>Language:</strong> TypeScript</li>
+      <li><strong>Framework:</strong> Next.js 16 (App Router)</li>
+      <li><strong>UI:</strong> React 19, Tailwind CSS 4, Radix UI (dialogs, labels, scroll-area, etc.), Lucide React (icons)</li>
+      <li><strong>Linting:</strong> ESLint, eslint-config-next</li>
+    </ul>
+
+    <h3>3.4 Project Structure</h3>
+    <ul>
+      <li><code>/apps/api</code> – FastAPI backend (routers: auth, student, instructor, admin, analyst)</li>
+      <li><code>/apps/web</code> – Next.js frontend (admin, analyst, instructor, student, login)</li>
+      <li><code>/docs</code> – Documentation (API.md, SCHEMA.md) and this submission document</li>
+    </ul>
+  </div>
+</body>
+</html>
