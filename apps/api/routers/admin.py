@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete, func, and_
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 from typing import List, Optional
 from datetime import datetime, timezone
@@ -349,6 +350,8 @@ async def approve_course_proposal(
         university_id=proposal.university_id,
         program_id=proposal.program_id,
         textbook_id=proposal.textbook_id,
+        max_capacity=100,
+        current_enrollment=0,
     )
     db.add(course)
     await db.flush()
@@ -362,7 +365,16 @@ async def approve_course_proposal(
         if existing:
             db.add(CourseTopic(course_id=course.course_id, topic_id=topic_id))
     proposal.status = "approved"
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError as e:
+        await db.rollback()
+        msg = str(e.orig) if getattr(e, "orig", None) else str(e)
+        if "course_name" in msg or "unique" in msg.lower():
+            raise HTTPException(status_code=400, detail="A course with this name already exists")
+        if "foreign key" in msg.lower() or "violates" in msg.lower():
+            raise HTTPException(status_code=400, detail="Invalid university, program, textbook, or instructor reference")
+        raise HTTPException(status_code=400, detail="Database constraint violation")
     return {"message": "Course approved and created", "course_id": course.course_id}
 
 
