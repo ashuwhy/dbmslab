@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { fetchWithAuth } from '@/lib/auth';
 import { useParams } from 'next/navigation';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { CameraVideoIcon, BookOpen01Icon, Note01Icon, File01Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons';
 
 interface ContentItem {
     content_id: number;
@@ -11,11 +13,20 @@ interface ContentItem {
     url: string | null;
 }
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
 interface Student {
     student_id: number;
     full_name: string;
     email: string | null;
     evaluation_score: number | null;
+}
+
+interface Application {
+    student_id: number;
+    full_name: string;
+    email: string | null;
+    enroll_date: string;
 }
 
 export default function CourseContentPage() {
@@ -28,18 +39,22 @@ export default function CourseContentPage() {
     const [message, setMessage] = useState('');
     const [contentItems, setContentItems] = useState<ContentItem[]>([]);
     const [students, setStudents] = useState<Student[]>([]);
-    const [activeTab, setActiveTab] = useState<'content' | 'students'>('content');
+    const [applications, setApplications] = useState<Application[]>([]);
+    const [activeTab, setActiveTab] = useState<'content' | 'students' | 'applications'>('content');
+    const [gradeInputs, setGradeInputs] = useState<Record<number, string>>({});
+
+    const fetchData = async () => {
+        const [contentRes, studentsRes, appsRes] = await Promise.all([
+            fetchWithAuth(`${API_URL}/instructor/courses/${courseId}/content-items`),
+            fetchWithAuth(`${API_URL}/instructor/courses/${courseId}/students`),
+            fetchWithAuth(`${API_URL}/instructor/courses/${courseId}/applications`),
+        ]);
+        if (contentRes.ok) setContentItems(await contentRes.json());
+        if (studentsRes.ok) setStudents(await studentsRes.json());
+        if (appsRes.ok) setApplications(await appsRes.json());
+    };
 
     useEffect(() => {
-        const fetchData = async () => {
-            const [contentRes, studentsRes] = await Promise.all([
-                fetchWithAuth(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/instructor/courses/${courseId}/content-items`),
-                fetchWithAuth(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/instructor/courses/${courseId}/students`)
-            ]);
-
-            if (contentRes.ok) setContentItems(await contentRes.json());
-            if (studentsRes.ok) setStudents(await studentsRes.json());
-        };
         fetchData();
     }, [courseId]);
 
@@ -47,7 +62,7 @@ export default function CourseContentPage() {
         e.preventDefault();
         setMessage('');
         try {
-            const res = await fetchWithAuth(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/instructor/courses/${courseId}/content-items`, {
+            const res = await fetchWithAuth(`${API_URL}/instructor/courses/${courseId}/content-items`, {
                 method: 'POST',
                 body: JSON.stringify({ title, url, content_type: contentType }),
             });
@@ -57,7 +72,7 @@ export default function CourseContentPage() {
                 setTitle('');
                 setUrl('');
                 // Refresh content list
-                const refreshRes = await fetchWithAuth(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/instructor/courses/${courseId}/content-items`);
+                const refreshRes = await fetchWithAuth(`${API_URL}/instructor/courses/${courseId}/content-items`);
                 if (refreshRes.ok) setContentItems(await refreshRes.json());
             } else {
                 const err = await res.json();
@@ -70,10 +85,10 @@ export default function CourseContentPage() {
 
     const getContentIcon = (type: string) => {
         switch (type) {
-            case 'video': return '🎬';
-            case 'book': return '📚';
-            case 'notes': return '📝';
-            default: return '📄';
+            case 'video': return <HugeiconsIcon icon={CameraVideoIcon} className="w-5 h-5" />;
+            case 'book': return <HugeiconsIcon icon={BookOpen01Icon} className="w-5 h-5" />;
+            case 'notes': return <HugeiconsIcon icon={Note01Icon} className="w-5 h-5" />;
+            default: return <HugeiconsIcon icon={File01Icon} className="w-5 h-5" />;
         }
     };
 
@@ -91,6 +106,12 @@ export default function CourseContentPage() {
                     onClick={() => setActiveTab('content')}
                 >
                     Content ({contentItems.length})
+                </button>
+                <button
+                    className={`tab ${activeTab === 'applications' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('applications')}
+                >
+                    Applications ({applications.length})
                 </button>
                 <button
                     className={`tab ${activeTab === 'students' ? 'active' : ''}`}
@@ -174,9 +195,9 @@ export default function CourseContentPage() {
                                                 href={item.url}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="text-sm text-blue-400 hover:underline"
+                                                className="text-sm text-blue-400 hover:underline flex items-center gap-1"
                                             >
-                                                Open →
+                                                Open <HugeiconsIcon icon={ArrowRight01Icon} className="w-3 h-3" />
                                             </a>
                                         )}
                                     </div>
@@ -187,8 +208,91 @@ export default function CourseContentPage() {
                 </div>
             )}
 
+            {activeTab === 'applications' && (
+                <div>
+                    {applications.length === 0 ? (
+                        <div className="card empty-state">
+                            <p>No pending applications.</p>
+                        </div>
+                    ) : (
+                        <div className="card p-0 overflow-hidden">
+                            <table className="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Applied</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {applications.map((app) => (
+                                        <tr key={app.student_id}>
+                                            <td className="text-white">{app.full_name}</td>
+                                            <td className="text-zinc-400">{app.email || 'N/A'}</td>
+                                            <td className="text-zinc-400">{app.enroll_date}</td>
+                                            <td className="flex gap-2">
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-primary text-sm"
+                                                    onClick={async () => {
+                                                        setMessage('');
+                                                        try {
+                                                            const res = await fetchWithAuth(`${API_URL}/instructor/courses/${courseId}/applications/approve`, {
+                                                                method: 'POST',
+                                                                headers: { 'Content-Type': 'application/json' },
+                                                                body: JSON.stringify({ student_id: app.student_id }),
+                                                            });
+                                                            if (res.ok) {
+                                                                setMessage('Application approved');
+                                                                fetchData();
+                                                            } else {
+                                                                const d = await res.json().catch(() => ({}));
+                                                                setMessage(`Error: ${d.detail || res.statusText}`);
+                                                            }
+                                                        } catch {
+                                                            setMessage('Failed to approve');
+                                                        }
+                                                    }}
+                                                >
+                                                    Approve
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-secondary text-sm"
+                                                    onClick={async () => {
+                                                        setMessage('');
+                                                        try {
+                                                            const res = await fetchWithAuth(`${API_URL}/instructor/courses/${courseId}/applications/reject`, {
+                                                                method: 'POST',
+                                                                headers: { 'Content-Type': 'application/json' },
+                                                                body: JSON.stringify({ student_id: app.student_id }),
+                                                            });
+                                                            if (res.ok) {
+                                                                setMessage('Application rejected');
+                                                                fetchData();
+                                                            } else setMessage('Failed to reject');
+                                                        } catch {
+                                                            setMessage('Failed to reject');
+                                                        }
+                                                    }}
+                                                >
+                                                    Reject
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                            {message && <p className={`p-3 text-sm ${message.includes('Error') ? 'text-red-400' : 'text-green-400'}`}>{message}</p>}
+                        </div>
+                    )}
+                </div>
+            )}
+
             {activeTab === 'students' && (
                 <div>
+                    {message && <p className={`mb-4 text-sm ${message.includes('Error') ? 'text-red-400' : 'text-green-400'}`}>{message}</p>}
                     {students.length === 0 ? (
                         <div className="card empty-state">
                             <p>No students enrolled in this course yet.</p>
@@ -201,6 +305,7 @@ export default function CourseContentPage() {
                                         <th>Name</th>
                                         <th>Email</th>
                                         <th>Score</th>
+                                        <th>Grade</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -216,6 +321,50 @@ export default function CourseContentPage() {
                                                 ) : (
                                                     <span className="text-zinc-500">Pending</span>
                                                 )}
+                                            </td>
+                                            <td>
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        type="number"
+                                                        min={0}
+                                                        max={100}
+                                                        className="input w-20 text-sm"
+                                                        placeholder="0-100"
+                                                        value={gradeInputs[student.student_id] ?? (student.evaluation_score ?? '')}
+                                                        onChange={(e) => setGradeInputs((prev) => ({ ...prev, [student.student_id]: e.target.value }))}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-primary text-sm"
+                                                        onClick={async () => {
+                                                            const val = gradeInputs[student.student_id] ?? student.evaluation_score ?? '';
+                                                            const score = typeof val === 'string' ? parseInt(val, 10) : val;
+                                                            if (Number.isNaN(score) || score < 0 || score > 100) {
+                                                                setMessage('Enter a score between 0 and 100');
+                                                                return;
+                                                            }
+                                                            setMessage('');
+                                                            try {
+                                                                const res = await fetchWithAuth(`${API_URL}/instructor/courses/${courseId}/students/${student.student_id}/grade`, {
+                                                                    method: 'PATCH',
+                                                                    headers: { 'Content-Type': 'application/json' },
+                                                                    body: JSON.stringify({ evaluation_score: score }),
+                                                                });
+                                                                if (res.ok) {
+                                                                    setMessage('Grade saved');
+                                                                    fetchData();
+                                                                } else {
+                                                                    const d = await res.json().catch(() => ({}));
+                                                                    setMessage(`Error: ${d.detail || res.statusText}`);
+                                                                }
+                                                            } catch {
+                                                                setMessage('Failed to save grade');
+                                                            }
+                                                        }}
+                                                    >
+                                                        Save
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}

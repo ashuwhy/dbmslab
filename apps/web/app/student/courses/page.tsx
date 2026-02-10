@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { fetchWithAuth } from '@/lib/auth';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { UniversityIcon, Calendar03Icon, Certificate01Icon, CheckmarkCircle01Icon } from '@hugeicons/core-free-icons';
+
 
 interface Course {
     course_id: number;
@@ -73,8 +76,8 @@ export default function StudentCoursesPage() {
             });
 
             if (res.ok) {
-                setMessage('Enrolled successfully!');
-                setEnrolledIds(new Set([...enrolledIds, courseId]));
+                setMessage('Application submitted. Instructor will review.');
+                loadEnrollments();
             } else {
                 const err = await res.json();
                 setMessage(`Error: ${err.detail}`);
@@ -88,7 +91,7 @@ export default function StudentCoursesPage() {
         <div className="space-y-6">
             <div className="section-header">
                 <h1 className="section-title">Available Courses</h1>
-                <p className="section-description">Browse and enroll in courses from top universities</p>
+                <p className="section-description">Browse and apply for courses from top universities</p>
             </div>
 
             {/* Search and Filters */}
@@ -143,14 +146,19 @@ export default function StudentCoursesPage() {
                         <div key={course.course_id} className="card hover:border-zinc-600">
                             <div className="flex items-start justify-between gap-4">
                                 <div className="flex-1">
+
+
+                                    // ... existing imports
+
+                                    // ... inside component
                                     <h3 className="text-lg font-semibold text-white">{course.course_name}</h3>
                                     <div className="flex items-center gap-3 mt-2 text-sm text-zinc-400">
                                         {course.university_name && (
-                                            <span>🏛️ {course.university_name}</span>
+                                            <span className="flex items-center gap-1"><HugeiconsIcon icon={UniversityIcon} className="w-4 h-4" /> {course.university_name}</span>
                                         )}
-                                        <span>📅 {course.duration_weeks} weeks</span>
+                                        <span className="flex items-center gap-1"><HugeiconsIcon icon={Calendar03Icon} className="w-4 h-4" /> {course.duration_weeks} weeks</span>
                                         {course.program_name && (
-                                            <span>📜 {course.program_name}</span>
+                                            <span className="flex items-center gap-1"><HugeiconsIcon icon={Certificate01Icon} className="w-4 h-4" /> {course.program_name}</span>
                                         )}
                                     </div>
                                     {course.topics.length > 0 && (
@@ -163,13 +171,13 @@ export default function StudentCoursesPage() {
                                 </div>
                                 <div>
                                     {enrolledIds.has(course.course_id) ? (
-                                        <span className="badge badge-success">Enrolled ✓</span>
+                                        <span className="badge badge-success flex items-center gap-1">Enrolled <HugeiconsIcon icon={CheckmarkCircle01Icon} className="w-3 h-3" /></span>
                                     ) : (
                                         <button
                                             onClick={() => handleEnroll(course.course_id)}
                                             className="btn btn-secondary"
                                         >
-                                            Enroll
+                                            Apply
                                         </button>
                                     )}
                                 </div>

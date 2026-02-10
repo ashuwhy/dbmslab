@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete, func
+from sqlalchemy import select, delete, func, and_
 from sqlalchemy.orm import selectinload
 from typing import List, Optional
+from datetime import datetime, timezone
 from database import get_db
-from models import AppUser, TeachingAssignment, Student, Enrollment, Instructor, Course, University, Program
+from models import AppUser, TeachingAssignment, Student, Enrollment, Instructor, Course, University, Program, CourseProposal, TopicProposal, Topic, Textbook, Executive
 from dependencies import RoleChecker
 from routers.auth import get_password_hash
 from pydantic import BaseModel
@@ -25,6 +26,8 @@ class UserCreateRequest(BaseModel):
     age: Optional[int] = None
     country: Optional[str] = None
     skill_level: Optional[str] = None
+    # Instructor specific fields
+    teaching_years: Optional[int] = None
 
 class UserResponse(BaseModel):
     id: int
@@ -82,6 +85,51 @@ class CourseUpdateRequest(BaseModel):
     university_id: Optional[int] = None
     program_id: Optional[int] = None
 
+
+class CourseCreateRequest(BaseModel):
+    course_name: str
+    duration_weeks: int
+    university_id: int
+    program_id: int
+    textbook_id: int
+    max_capacity: Optional[int] = 100
+
+
+class PendingInstructorResponse(BaseModel):
+    id: int
+    email: str
+    full_name: str
+    teaching_years: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+
+class PendingAnalystResponse(BaseModel):
+    id: int
+    email: str
+
+    class Config:
+        from_attributes = True
+
+
+class CourseProposalListItem(BaseModel):
+    id: int
+    instructor_id: int
+    instructor_name: str
+    course_name: str
+    duration_weeks: int
+    status: str
+
+
+class TopicProposalListItem(BaseModel):
+    id: int
+    instructor_id: int
+    instructor_name: str
+    topic_name: str
+    status: str
+
+
 # Endpoints
 @router.get("/stats", response_model=DashboardStats)
 async def get_dashboard_stats(db: AsyncSession = Depends(get_db)):
@@ -117,9 +165,40 @@ async def create_user(
         raise HTTPException(status_code=400, detail="Email already registered")
     
     hashed_password = get_password_hash(user.password)
-    db_user = AppUser(email=user.email, password_hash=hashed_password, role=user.role)
+    # Admin-created instructor/analyst are immediately approved
+    now_utc = datetime.now(timezone.utc)
+    approved_at = now_utc if user.role in ("instructor", "analyst", "admin") else None
+    db_user = AppUser(
+        email=user.email,
+        password_hash=hashed_password,
+        role=user.role,
+        approved_at=approved_at,
+    )
     db.add(db_user)
     
+    # If role is instructor, create Instructor record and approve
+    if user.role == "instructor":
+        if not user.full_name:
+            raise HTTPException(status_code=400, detail="Full name is required for instructor users")
+        instructor = Instructor(
+            full_name=user.full_name,
+            email=user.email,
+            teaching_years=user.teaching_years,
+        )
+        db.add(instructor)
+    
+    # If role is admin or analyst, create Executive record (stores full_name)
+    if user.role in ("admin", "analyst"):
+        if not user.full_name:
+            raise HTTPException(status_code=400, detail="Full name is required for admin and analyst users")
+        await db.flush()
+        executive = Executive(
+            app_user_id=db_user.id,
+            full_name=user.full_name,
+            executive_type=user.role,
+        )
+        db.add(executive)
+
     # If role is student, create Student record
     if user.role == "student":
         if not all([user.full_name, user.age, user.country]):
@@ -168,6 +247,187 @@ async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
     await db.commit()
     return {"message": "User deleted"}
 
+
+@router.get("/pending-instructors", response_model=List[PendingInstructorResponse])
+async def list_pending_instructors(db: AsyncSession = Depends(get_db)):
+    """List instructors waiting for admin approval (approved_at is null)."""
+    stmt = (
+        select(AppUser.id, AppUser.email, Instructor.full_name, Instructor.teaching_years)
+        .join(Instructor, Instructor.email == AppUser.email)
+        .where(AppUser.role == "instructor", AppUser.approved_at.is_(None))
+    )
+    result = await db.execute(stmt)
+    return [
+        PendingInstructorResponse(
+            id=row[0],
+            email=row[1],
+            full_name=row[2],
+            teaching_years=row[3],
+        )
+        for row in result
+    ]
+
+
+@router.get("/pending-analysts", response_model=List[PendingAnalystResponse])
+async def list_pending_analysts(db: AsyncSession = Depends(get_db)):
+    """List analysts waiting for admin approval (approved_at is null)."""
+    result = await db.execute(
+        select(AppUser).where(AppUser.role == "analyst", AppUser.approved_at.is_(None))
+    )
+    users = result.scalars().all()
+    return [PendingAnalystResponse(id=u.id, email=u.email) for u in users]
+
+
+@router.post("/approve-instructor/{user_id}")
+async def approve_instructor(user_id: int, db: AsyncSession = Depends(get_db)):
+    """Set approved_at for an instructor so they can log in and use instructor routes."""
+    result = await db.execute(select(AppUser).where(AppUser.id == user_id, AppUser.role == "instructor"))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found or not an instructor")
+    user.approved_at = datetime.now(timezone.utc)
+    await db.commit()
+    return {"message": "Instructor approved"}
+
+
+@router.post("/approve-analyst/{user_id}")
+async def approve_analyst(user_id: int, db: AsyncSession = Depends(get_db)):
+    """Set approved_at for an analyst so they can log in and use analyst routes."""
+    result = await db.execute(select(AppUser).where(AppUser.id == user_id, AppUser.role == "analyst"))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found or not an analyst")
+    user.approved_at = datetime.now(timezone.utc)
+    await db.commit()
+    return {"message": "Analyst approved"}
+
+
+@router.get("/course-proposals", response_model=List[CourseProposalListItem])
+async def list_pending_course_proposals(db: AsyncSession = Depends(get_db)):
+    """List course proposals with status pending."""
+    stmt = (
+        select(CourseProposal, Instructor.full_name)
+        .join(Instructor, CourseProposal.instructor_id == Instructor.instructor_id)
+        .where(CourseProposal.status == "pending")
+    )
+    result = await db.execute(stmt)
+    return [
+        CourseProposalListItem(
+            id=row[0].id,
+            instructor_id=row[0].instructor_id,
+            instructor_name=row[1],
+            course_name=row[0].course_name,
+            duration_weeks=row[0].duration_weeks,
+            status=row[0].status,
+        )
+        for row in result
+    ]
+
+
+@router.post("/course-proposals/{proposal_id}/approve")
+async def approve_course_proposal(proposal_id: int, db: AsyncSession = Depends(get_db)):
+    """Create Course from proposal and assign instructor; set proposal status approved."""
+    result = await db.execute(select(CourseProposal).where(CourseProposal.id == proposal_id, CourseProposal.status == "pending"))
+    proposal = result.scalar_one_or_none()
+    if not proposal:
+        raise HTTPException(status_code=404, detail="Proposal not found or already processed")
+    course = Course(
+        course_name=proposal.course_name,
+        duration_weeks=proposal.duration_weeks,
+        university_id=proposal.university_id,
+        program_id=proposal.program_id,
+        textbook_id=proposal.textbook_id,
+    )
+    db.add(course)
+    await db.flush()
+    db.add(TeachingAssignment(
+        instructor_id=proposal.instructor_id,
+        course_id=course.course_id,
+        role="instructor",
+    ))
+    proposal.status = "approved"
+    await db.commit()
+    return {"message": "Course approved and created", "course_id": course.course_id}
+
+
+@router.post("/course-proposals/{proposal_id}/reject")
+async def reject_course_proposal(proposal_id: int, db: AsyncSession = Depends(get_db)):
+    """Set course proposal status to rejected."""
+    result = await db.execute(select(CourseProposal).where(CourseProposal.id == proposal_id, CourseProposal.status == "pending"))
+    proposal = result.scalar_one_or_none()
+    if not proposal:
+        raise HTTPException(status_code=404, detail="Proposal not found or already processed")
+    proposal.status = "rejected"
+    await db.commit()
+    return {"message": "Proposal rejected"}
+
+
+@router.get("/topic-proposals", response_model=List[TopicProposalListItem])
+async def list_pending_topic_proposals(db: AsyncSession = Depends(get_db)):
+    """List topic proposals with status pending."""
+    stmt = (
+        select(TopicProposal, Instructor.full_name)
+        .join(Instructor, TopicProposal.instructor_id == Instructor.instructor_id)
+        .where(TopicProposal.status == "pending")
+    )
+    result = await db.execute(stmt)
+    return [
+        TopicProposalListItem(
+            id=row[0].id,
+            instructor_id=row[0].instructor_id,
+            instructor_name=row[1],
+            topic_name=row[0].topic_name,
+            status=row[0].status,
+        )
+        for row in result
+    ]
+
+
+@router.post("/topic-proposals/{proposal_id}/approve")
+async def approve_topic_proposal(proposal_id: int, db: AsyncSession = Depends(get_db)):
+    """Create Topic if not exists; set proposal status approved."""
+    result = await db.execute(select(TopicProposal).where(TopicProposal.id == proposal_id, TopicProposal.status == "pending"))
+    proposal = result.scalar_one_or_none()
+    if not proposal:
+        raise HTTPException(status_code=404, detail="Proposal not found or already processed")
+    existing = await db.execute(select(Topic).where(Topic.topic_name == proposal.topic_name))
+    if not existing.scalar_one_or_none():
+        topic = Topic(topic_name=proposal.topic_name)
+        db.add(topic)
+    proposal.status = "approved"
+    await db.commit()
+    return {"message": "Topic proposal approved"}
+
+
+@router.post("/topic-proposals/{proposal_id}/reject")
+async def reject_topic_proposal(proposal_id: int, db: AsyncSession = Depends(get_db)):
+    """Set topic proposal status to rejected."""
+    result = await db.execute(select(TopicProposal).where(TopicProposal.id == proposal_id, TopicProposal.status == "pending"))
+    proposal = result.scalar_one_or_none()
+    if not proposal:
+        raise HTTPException(status_code=404, detail="Proposal not found or already processed")
+    proposal.status = "rejected"
+    await db.commit()
+    return {"message": "Proposal rejected"}
+
+
+@router.post("/courses")
+async def create_course(body: CourseCreateRequest, db: AsyncSession = Depends(get_db)):
+    """Create a new course (admin)."""
+    course = Course(
+        course_name=body.course_name,
+        duration_weeks=body.duration_weeks,
+        university_id=body.university_id,
+        program_id=body.program_id,
+        textbook_id=body.textbook_id,
+        max_capacity=body.max_capacity or 100,
+    )
+    db.add(course)
+    await db.commit()
+    await db.refresh(course)
+    return {"message": "Course created", "course_id": course.course_id}
+
+
 @router.get("/courses", response_model=List[CourseResponse])
 async def list_courses(db: AsyncSession = Depends(get_db)):
     """List all courses with enrollment counts and assigned instructors."""
@@ -181,7 +441,7 @@ async def list_courses(db: AsyncSession = Depends(get_db)):
         )
         .outerjoin(University, Course.university_id == University.university_id)
         .outerjoin(Program, Course.program_id == Program.program_id)
-        .outerjoin(Enrollment, Course.course_id == Enrollment.course_id)
+        .outerjoin(Enrollment, and_(Enrollment.course_id == Course.course_id, Enrollment.status == "approved"))
         .outerjoin(TeachingAssignment, Course.course_id == TeachingAssignment.course_id)
         .outerjoin(Instructor, TeachingAssignment.instructor_id == Instructor.instructor_id)
         .group_by(Course.course_id, University.name, Program.program_name)
@@ -200,6 +460,28 @@ async def list_courses(db: AsyncSession = Depends(get_db)):
             instructor_names=row[4]
         ))
     return courses
+
+
+@router.get("/universities")
+async def list_universities(db: AsyncSession = Depends(get_db)):
+    """List universities for course creation dropdown."""
+    result = await db.execute(select(University))
+    return [{"university_id": u.university_id, "name": u.name} for u in result.scalars().all()]
+
+
+@router.get("/programs")
+async def list_programs(db: AsyncSession = Depends(get_db)):
+    """List programs for course creation dropdown."""
+    result = await db.execute(select(Program))
+    return [{"program_id": p.program_id, "program_name": p.program_name} for p in result.scalars().all()]
+
+
+@router.get("/textbooks")
+async def list_textbooks(db: AsyncSession = Depends(get_db)):
+    """List textbooks for course creation dropdown."""
+    result = await db.execute(select(Textbook))
+    return [{"textbook_id": t.textbook_id, "title": t.title} for t in result.scalars().all()]
+
 
 @router.get("/instructors", response_model=List[InstructorResponse])
 async def list_instructors(db: AsyncSession = Depends(get_db)):

@@ -12,6 +12,18 @@ class AppUser(Base):
     password_hash = Column(String, nullable=False)
     role = Column(String, nullable=False)  # admin, instructor, student, analyst
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    approved_at = Column(DateTime(timezone=True), nullable=True)  # set when admin approves instructor/analyst
+
+
+# Executive: admin and analyst (name and role type stored here)
+class Executive(Base):
+    __tablename__ = "executive"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    app_user_id = Column(Integer, ForeignKey("app_user.id", ondelete="CASCADE"), unique=True, nullable=False)
+    full_name = Column(String(100), nullable=False)
+    executive_type = Column(String(20), nullable=False)  # 'admin' | 'analyst'
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
 # Domain tables matching 23CS10005_A2.sql schema
@@ -104,9 +116,12 @@ class Instructor(Base):
     instructor_id = Column(Integer, primary_key=True, autoincrement=True)
     full_name = Column(String(100), nullable=False)
     email = Column(String(100), unique=True)
+    teaching_years = Column(Integer, nullable=True)
     
     # Relationships
     teaching_assignments = relationship("TeachingAssignment", back_populates="instructor")
+    course_proposals = relationship("CourseProposal", back_populates="instructor")
+    topic_proposals = relationship("TopicProposal", back_populates="instructor")
 
 
 class TeachingAssignment(Base):
@@ -147,6 +162,7 @@ class Enrollment(Base):
     course_id = Column(Integer, ForeignKey("course.course_id", ondelete="CASCADE"), primary_key=True)
     enroll_date = Column(Date, nullable=False)
     evaluation_score = Column(Integer)
+    status = Column(String(20), default="pending", nullable=False)  # pending | approved | rejected
     
     __table_args__ = (
         Index("idx_enrollment_score", "evaluation_score"),
@@ -156,6 +172,39 @@ class Enrollment(Base):
     student = relationship("Student", back_populates="enrollments")
     course = relationship("Course", back_populates="enrollments")
 
+
+
+class CourseProposal(Base):
+    __tablename__ = "course_proposal"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    instructor_id = Column(Integer, ForeignKey("instructor.instructor_id", ondelete="CASCADE"), nullable=False)
+    course_name = Column(String(150), nullable=False)
+    duration_weeks = Column(Integer, nullable=False)
+    university_id = Column(Integer, ForeignKey("university.university_id"), nullable=False)
+    program_id = Column(Integer, ForeignKey("program.program_id"), nullable=False)
+    textbook_id = Column(Integer, ForeignKey("textbook.textbook_id"), nullable=False)
+    status = Column(String(20), default="pending", nullable=False)  # pending | approved | rejected
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    instructor = relationship("Instructor", back_populates="course_proposals")
+    university = relationship("University")
+    program = relationship("Program")
+    textbook = relationship("Textbook")
+
+
+class TopicProposal(Base):
+    __tablename__ = "topic_proposal"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    instructor_id = Column(Integer, ForeignKey("instructor.instructor_id", ondelete="CASCADE"), nullable=False)
+    topic_name = Column(String(100), nullable=False)
+    status = Column(String(20), default="pending", nullable=False)  # pending | approved | rejected
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    instructor = relationship("Instructor", back_populates="topic_proposals")
 
 
 # Audit Log for Grade Changes (Trigger Implementation)

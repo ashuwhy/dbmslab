@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { ArrowRight01Icon } from '@hugeicons/core-free-icons';
 import { fetchWithAuth } from '@/lib/auth';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -91,7 +93,7 @@ export default function InstructorDashboard() {
                 <div className="flex items-center justify-between">
                     <h2 className="text-xl font-semibold text-white tracking-tight">My Courses</h2>
                     <Button variant="link" asChild className="text-zinc-400 hover:text-white">
-                        <Link href="/instructor/courses">View All →</Link>
+                        <Link href="/instructor/courses" className="flex items-center gap-1">View All <HugeiconsIcon icon={ArrowRight01Icon} className="w-4 h-4" /></Link>
                     </Button>
                 </div>
 

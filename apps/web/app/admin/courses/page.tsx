@@ -28,13 +28,26 @@ interface Instructor {
     email: string | null;
 }
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
 export default function AdminCoursesPage() {
     const [courses, setCourses] = useState<Course[]>([]);
     const [instructors, setInstructors] = useState<Instructor[]>([]);
+    const [universities, setUniversities] = useState<{ university_id: number; name: string }[]>([]);
+    const [programs, setPrograms] = useState<{ program_id: number; program_name: string }[]>([]);
+    const [textbooks, setTextbooks] = useState<{ textbook_id: number; title: string }[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedCourse, setSelectedCourse] = useState<number | null>(null);
     const [selectedInstructor, setSelectedInstructor] = useState<number | null>(null);
     const [message, setMessage] = useState('');
+
+    // Create course form
+    const [createCourseName, setCreateCourseName] = useState('');
+    const [createDuration, setCreateDuration] = useState('');
+    const [createUniversityId, setCreateUniversityId] = useState('');
+    const [createProgramId, setCreateProgramId] = useState('');
+    const [createTextbookId, setCreateTextbookId] = useState('');
+    const [createCapacity, setCreateCapacity] = useState('100');
 
     // Manage Instructors State
     const [managingCourse, setManagingCourse] = useState<Course | null>(null);
@@ -45,13 +58,19 @@ export default function AdminCoursesPage() {
 
     const fetchData = async () => {
         try {
-            const [coursesRes, instructorsRes] = await Promise.all([
-                fetchWithAuth(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/admin/courses`),
-                fetchWithAuth(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/admin/instructors`)
+            const [coursesRes, instructorsRes, uRes, pRes, tRes] = await Promise.all([
+                fetchWithAuth(`${API_URL}/admin/courses`),
+                fetchWithAuth(`${API_URL}/admin/instructors`),
+                fetchWithAuth(`${API_URL}/admin/universities`),
+                fetchWithAuth(`${API_URL}/admin/programs`),
+                fetchWithAuth(`${API_URL}/admin/textbooks`),
             ]);
 
             if (coursesRes.ok) setCourses(await coursesRes.json());
             if (instructorsRes.ok) setInstructors(await instructorsRes.json());
+            if (uRes.ok) setUniversities(await uRes.json());
+            if (pRes.ok) setPrograms(await pRes.json());
+            if (tRes.ok) setTextbooks(await tRes.json());
         } catch (error) {
             console.error(error);
         } finally {
@@ -62,6 +81,40 @@ export default function AdminCoursesPage() {
     useEffect(() => {
         fetchData();
     }, []);
+
+    const handleCreateCourse = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setMessage('');
+        try {
+            const res = await fetchWithAuth(`${API_URL}/admin/courses`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    course_name: createCourseName,
+                    duration_weeks: parseInt(createDuration, 10),
+                    university_id: parseInt(createUniversityId, 10),
+                    program_id: parseInt(createProgramId, 10),
+                    textbook_id: parseInt(createTextbookId, 10),
+                    max_capacity: parseInt(createCapacity, 10) || 100,
+                }),
+            });
+            if (res.ok) {
+                setMessage('Course created');
+                setCreateCourseName('');
+                setCreateDuration('');
+                setCreateUniversityId('');
+                setCreateProgramId('');
+                setCreateTextbookId('');
+                setCreateCapacity('100');
+                fetchData();
+            } else {
+                const err = await res.json();
+                setMessage(`Error: ${err.detail}`);
+            }
+        } catch {
+            setMessage('Failed to create course');
+        }
+    };
 
     const handleAssign = async () => {
         if (!selectedCourse || !selectedInstructor) return;
@@ -158,6 +211,64 @@ export default function AdminCoursesPage() {
                 <p className="text-zinc-400">View courses and assign instructors</p>
             </div>
 
+            {message && (
+                <p className={`text-sm font-medium ${message.includes('Error') ? 'text-red-400' : 'text-green-400'}`}>{message}</p>
+            )}
+
+            {/* Create Course */}
+            <Card className="bg-zinc-900/50 border-zinc-800">
+                <CardHeader>
+                    <CardTitle>Create Course</CardTitle>
+                    <CardDescription>Add a new course. You can then assign instructors from the list below.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <form onSubmit={handleCreateCourse} className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
+                        <div className="space-y-2">
+                            <Label>Course name</Label>
+                            <Input value={createCourseName} onChange={(e) => setCreateCourseName(e.target.value)} required className="bg-black/20" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Duration (weeks)</Label>
+                            <Input type="number" min={1} value={createDuration} onChange={(e) => setCreateDuration(e.target.value)} required className="bg-black/20" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>University</Label>
+                            <select value={createUniversityId} onChange={(e) => setCreateUniversityId(e.target.value)} required className="flex h-10 w-full rounded-md border border-zinc-800 bg-black/20 px-3 py-2 text-sm text-white">
+                                <option value="">Select</option>
+                                {universities.map((u) => (
+                                    <option key={u.university_id} value={u.university_id}>{u.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Program</Label>
+                            <select value={createProgramId} onChange={(e) => setCreateProgramId(e.target.value)} required className="flex h-10 w-full rounded-md border border-zinc-800 bg-black/20 px-3 py-2 text-sm text-white">
+                                <option value="">Select</option>
+                                {programs.map((p) => (
+                                    <option key={p.program_id} value={p.program_id}>{p.program_name}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Textbook</Label>
+                            <select value={createTextbookId} onChange={(e) => setCreateTextbookId(e.target.value)} required className="flex h-10 w-full rounded-md border border-zinc-800 bg-black/20 px-3 py-2 text-sm text-white">
+                                <option value="">Select</option>
+                                {textbooks.map((t) => (
+                                    <option key={t.textbook_id} value={t.textbook_id}>{t.title}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Max capacity</Label>
+                            <Input type="number" min={1} value={createCapacity} onChange={(e) => setCreateCapacity(e.target.value)} className="bg-black/20" />
+                        </div>
+                        <div className="md:col-span-2 lg:col-span-6">
+                            <Button type="submit">Create course</Button>
+                        </div>
+                    </form>
+                </CardContent>
+            </Card>
+
             {/* Assign Instructor */}
             <Card className="bg-zinc-900/50 border-zinc-800">
                 <CardHeader>
@@ -206,11 +317,6 @@ export default function AdminCoursesPage() {
                             Assign
                         </Button>
                     </div>
-                    {message && (
-                        <p className={`mt-4 text-sm font-medium ${message.includes('Error') ? 'text-red-400' : 'text-green-400'}`}>
-                            {message}
-                        </p>
-                    )}
                 </CardContent>
             </Card>
 

@@ -41,11 +41,25 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
 async def get_current_active_user(current_user: AppUser = Depends(get_current_user)) -> AppUser:
     return current_user
 
+
+async def require_approved(current_user: AppUser = Depends(get_current_user)) -> AppUser:
+    """For instructor/analyst: block access until admin has set approved_at."""
+    if current_user.role in ("instructor", "analyst") and getattr(current_user, "approved_at", None) is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account pending admin approval",
+        )
+    return current_user
+
+
 class RoleChecker:
-    def __init__(self, allowed_roles: List[str]):
+    def __init__(self, allowed_roles: List[str], require_approved: bool = True):
         self.allowed_roles = allowed_roles
+        self.require_approved = require_approved
 
     def __call__(self, user: AppUser = Depends(get_current_active_user)):
         if user.role not in self.allowed_roles:
             raise HTTPException(status_code=403, detail="Operation not permitted")
+        if self.require_approved and user.role in ("instructor", "analyst") and getattr(user, "approved_at", None) is None:
+            raise HTTPException(status_code=403, detail="Account pending admin approval")
         return user
