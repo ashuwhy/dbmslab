@@ -273,7 +273,7 @@ COMMENT ON TABLE "public"."executive" IS 'Admin and analyst users; stores full_n
 CREATE UNIQUE INDEX executive_app_user_id_key ON public.executive USING btree (app_user_id);
 CREATE INDEX idx_executive_app_user_id ON public.executive USING btree (app_user_id);
 CREATE INDEX idx_executive_type ON public.executive USING btree (executive_type);
-ALTER TABLE "public"."instructor" ADD FOREIGN KEY ("user_id") REFERENCES "public"."app_user"("id") ON DELETE SET NULL;
+ALTER TABLE "public"."instructor" ADD FOREIGN KEY ("user_id") REFERENCES "public"."app_user"("id") ON DELETE CASCADE;
 
 
 -- Indices

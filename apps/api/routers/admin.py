@@ -244,12 +244,43 @@ async def create_user(
 
 @router.delete("/users/{user_id}")
 async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
-    """Delete a user."""
+    """Delete a user and all related records (student/instructor/executive + dependents)."""
     result = await db.execute(select(AppUser).where(AppUser.id == user_id))
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
+
+    # Clean up role-specific records linked by email (not FK-cascaded)
+    if user.role == "student":
+        stu_result = await db.execute(select(Student).where(Student.email == user.email))
+        student = stu_result.scalar_one_or_none()
+        if student:
+            # enrollments cascade via DB FK, but decrement counters first
+            enr_result = await db.execute(
+                select(Enrollment.course_id).where(Enrollment.student_id == student.student_id)
+            )
+            course_ids = [row[0] for row in enr_result]
+            if course_ids:
+                await db.execute(
+                    delete(Enrollment).where(Enrollment.student_id == student.student_id)
+                )
+                for cid in course_ids:
+                    await db.execute(
+                        Course.__table__.update()
+                        .where(Course.course_id == cid)
+                        .values(current_enrollment=Course.current_enrollment - 1)
+                    )
+            await db.execute(delete(Student).where(Student.student_id == student.student_id))
+
+    elif user.role == "instructor":
+        inst_result = await db.execute(select(Instructor).where(Instructor.email == user.email))
+        instructor = inst_result.scalar_one_or_none()
+        if instructor:
+            # teaching_assignments, course_proposals, topic_proposals cascade via DB FK
+            await db.execute(delete(Instructor).where(Instructor.instructor_id == instructor.instructor_id))
+
+    # Executive is FK-cascaded (app_user_id ON DELETE CASCADE), deleted automatically
+
     await db.execute(delete(AppUser).where(AppUser.id == user_id))
     await db.commit()
     return {"message": "User deleted"}
@@ -632,13 +663,32 @@ async def delete_student(
     student_id: int,
     db: AsyncSession = Depends(get_db)
 ):
-    """Delete a student (cascades to enrollments)."""
+    """Delete a student and cascade to enrollments, decrementing course counters."""
     student = (await db.execute(select(Student).where(Student.student_id == student_id))).scalar_one_or_none()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
 
-    # Delete enrollments first (if cascade not handled by DB)
+    # Get all courses the student is enrolled in to decrement counters
+    enr_result = await db.execute(
+        select(Enrollment.course_id).where(Enrollment.student_id == student_id)
+    )
+    course_ids = [row[0] for row in enr_result]
+
+    # Delete enrollments
     await db.execute(delete(Enrollment).where(Enrollment.student_id == student_id))
+
+    # Decrement current_enrollment for each course
+    for cid in course_ids:
+        await db.execute(
+            Course.__table__.update()
+            .where(Course.course_id == cid)
+            .values(current_enrollment=Course.current_enrollment - 1)
+        )
+
+    # Also remove the linked AppUser if it exists
+    if student.email:
+        await db.execute(delete(AppUser).where(AppUser.email == student.email))
+
     await db.execute(delete(Student).where(Student.student_id == student_id))
     await db.commit()
     return {"message": "Student deleted"}
@@ -649,12 +699,29 @@ async def delete_enrollment(
     course_id: int,
     db: AsyncSession = Depends(get_db)
 ):
-    """Delete an enrollment."""
-    await db.execute(
-        delete(Enrollment).where(
-            (Enrollment.student_id == student_id) & 
+    """Delete an enrollment and decrement the course's current_enrollment counter."""
+    # Check enrollment exists
+    enr_result = await db.execute(
+        select(Enrollment).where(
+            (Enrollment.student_id == student_id) &
             (Enrollment.course_id == course_id)
         )
+    )
+    enrollment = enr_result.scalar_one_or_none()
+    if not enrollment:
+        raise HTTPException(status_code=404, detail="Enrollment not found")
+
+    await db.execute(
+        delete(Enrollment).where(
+            (Enrollment.student_id == student_id) &
+            (Enrollment.course_id == course_id)
+        )
+    )
+    # Decrement the course enrollment counter
+    await db.execute(
+        Course.__table__.update()
+        .where(Course.course_id == course_id)
+        .values(current_enrollment=Course.current_enrollment - 1)
     )
     await db.commit()
     return {"message": "Enrollment deleted"}
@@ -766,3 +833,31 @@ async def update_instructor(
 
     await db.refresh(instructor)
     return {"message": "Instructor updated successfully"}
+
+
+# --- University management (admin-only) ---
+
+class UniversityCreateRequest(BaseModel):
+    name: str
+    country: str
+
+@router.post("/universities")
+async def create_university(
+    body: UniversityCreateRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """Create a new university (admin only, enforced by router-level RoleChecker)."""
+    # Check for duplicate
+    existing = await db.execute(select(University).where(University.name == body.name))
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="University with this name already exists")
+
+    uni = University(name=body.name, country=body.country)
+    db.add(uni)
+    try:
+        await db.commit()
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+    await db.refresh(uni)
+    return {"message": "University created", "university_id": uni.university_id}

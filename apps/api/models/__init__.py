@@ -93,10 +93,10 @@ class Course(Base):
     university = relationship("University", back_populates="courses")
     program = relationship("Program", back_populates="courses")
     textbook = relationship("Textbook", back_populates="courses")
-    topics = relationship("CourseTopic", back_populates="course")
-    enrollments = relationship("Enrollment", back_populates="course")
-    teaching_assignments = relationship("TeachingAssignment", back_populates="course")
-    content_items = relationship("ContentItem", back_populates="course")
+    topics = relationship("CourseTopic", back_populates="course", cascade="all, delete-orphan", passive_deletes=True)
+    enrollments = relationship("Enrollment", back_populates="course", cascade="all, delete-orphan", passive_deletes=True)
+    teaching_assignments = relationship("TeachingAssignment", back_populates="course", cascade="all, delete-orphan", passive_deletes=True)
+    content_items = relationship("ContentItem", back_populates="course", cascade="all, delete-orphan", passive_deletes=True)
 
 
 class CourseTopic(Base):
@@ -117,7 +117,7 @@ class Instructor(Base):
     full_name = Column(String(100), nullable=False)
     email = Column(String(100), unique=True)
     teaching_years = Column(Integer, nullable=True)  # years of teaching experience
-    user_id = Column(Integer, ForeignKey("app_user.id", ondelete="SET NULL"), nullable=True)
+    user_id = Column(Integer, ForeignKey("app_user.id", ondelete="CASCADE"), nullable=True)
     
     # Relationships
     user = relationship("AppUser", foreign_keys=[user_id])

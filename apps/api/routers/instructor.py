@@ -1068,3 +1068,34 @@ async def safe_enroll_student(
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=500, detail=f"Enrollment failed: {str(e)}")
+
+
+# --- Textbook management (instructor + admin) ---
+
+class TextbookCreateRequest(BaseModel):
+    title: str
+    isbn: Optional[str] = None
+    url: Optional[str] = None
+
+@router.post("/textbooks")
+async def create_textbook(
+    body: TextbookCreateRequest,
+    current_user: AppUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Create a new textbook record. Instructors and admins can use this."""
+    # Check for duplicate ISBN if provided
+    if body.isbn:
+        existing = await db.execute(select(Textbook).where(Textbook.isbn == body.isbn))
+        if existing.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail="Textbook with this ISBN already exists")
+
+    textbook = Textbook(title=body.title, isbn=body.isbn, url=body.url)
+    db.add(textbook)
+    try:
+        await db.commit()
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+    await db.refresh(textbook)
+    return {"message": "Textbook created", "textbook_id": textbook.textbook_id}
