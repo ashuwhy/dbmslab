@@ -11,6 +11,9 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "https://dbmslab-ten.vercel.app",
+        "https://dbmslab-ten.vercel.app:3000",
+        "https://dbmslab-ten.vercel.app:8000",
     ],
     allow_credentials=True,
     allow_methods=["*"],
