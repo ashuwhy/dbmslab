@@ -48,6 +48,7 @@ export default function AdminDashboard() {
     ];
 
     const quickLinks = [
+        { href: '/admin/approvals', label: 'Pending Approvals', desc: 'Approve instructors, analysts, and course/topic proposals' },
         { href: '/admin/users', label: 'Manage Users', desc: 'Create and manage user accounts' },
         { href: '/admin/courses', label: 'Manage Courses', desc: 'View all courses and assignments' },
         { href: '/admin/students', label: 'Manage Students', desc: 'View and remove students' },

@@ -73,8 +73,8 @@ export default function StudentCoursesPage() {
             });
 
             if (res.ok) {
-                setMessage('Enrolled successfully!');
-                setEnrolledIds(new Set([...enrolledIds, courseId]));
+                setMessage('Application submitted. Instructor will review.');
+                loadEnrollments();
             } else {
                 const err = await res.json();
                 setMessage(`Error: ${err.detail}`);
@@ -88,7 +88,7 @@ export default function StudentCoursesPage() {
         <div className="space-y-6">
             <div className="section-header">
                 <h1 className="section-title">Available Courses</h1>
-                <p className="section-description">Browse and enroll in courses from top universities</p>
+                <p className="section-description">Browse and apply for courses from top universities</p>
             </div>
 
             {/* Search and Filters */}
@@ -169,7 +169,7 @@ export default function StudentCoursesPage() {
                                             onClick={() => handleEnroll(course.course_id)}
                                             className="btn btn-secondary"
                                         >
-                                            Enroll
+                                            Apply
                                         </button>
                                     )}
                                 </div>

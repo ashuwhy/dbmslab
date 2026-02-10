@@ -38,6 +38,16 @@ class EnrollmentResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
+class ApplicationResponse(BaseModel):
+    course_id: int
+    course_name: str
+    enroll_date: date
+    status: str
+    
+    class Config:
+        from_attributes = True
+
 @router.get("/courses", response_model=List[CourseResponse])
 async def get_courses(
     query: Optional[str] = None,
@@ -133,16 +143,17 @@ async def enroll_course(
     # Increment enrollment count
     course.current_enrollment += 1
 
-    # Create enrollment
+    # Create enrollment as pending (instructor must approve)
     new_enrollment = Enrollment(
         student_id=student.student_id,
         course_id=request.course_id,
         enroll_date=date.today(),
-        evaluation_score=None
+        evaluation_score=None,
+        status="pending",
     )
     db.add(new_enrollment)
     await db.commit()
-    return {"message": "Enrolled successfully"}
+    return {"message": "Application submitted. Instructor will review."}
 
 @router.get("/enrollments/me", response_model=List[EnrollmentResponse])
 async def get_my_enrollments(
@@ -159,7 +170,10 @@ async def get_my_enrollments(
     stmt = (
         select(Enrollment, Course)
         .join(Course, Enrollment.course_id == Course.course_id)
-        .where(Enrollment.student_id == student.student_id)
+        .where(
+            Enrollment.student_id == student.student_id,
+            Enrollment.status == "approved",
+        )
     )
     result = await db.execute(stmt)
     
@@ -173,6 +187,37 @@ async def get_my_enrollments(
         ))
     return enrollments
 
+
+@router.get("/applications/me", response_model=List[ApplicationResponse])
+async def get_my_applications(
+    current_user: AppUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get current user's course applications (pending or rejected)."""
+    result = await db.execute(select(Student).where(Student.email == current_user.email))
+    student = result.scalar_one_or_none()
+    if not student:
+        return []
+    stmt = (
+        select(Enrollment, Course)
+        .join(Course, Enrollment.course_id == Course.course_id)
+        .where(
+            Enrollment.student_id == student.student_id,
+            Enrollment.status.in_(["pending", "rejected"]),
+        )
+    )
+    result = await db.execute(stmt)
+    return [
+        ApplicationResponse(
+            course_id=course.course_id,
+            course_name=course.course_name,
+            enroll_date=enrollment.enroll_date,
+            status=enrollment.status,
+        )
+        for enrollment, course in result
+    ]
+
+
 @router.get("/stats")
 async def get_student_stats(
     current_user: AppUser = Depends(get_current_user),
@@ -185,25 +230,30 @@ async def get_student_stats(
     if not student:
         return {"total_enrollments": 0, "avg_score": None, "courses_completed": 0}
 
-    # Count enrollments
-    count_stmt = select(func.count(Enrollment.course_id)).where(Enrollment.student_id == student.student_id)
+    # Count approved enrollments only
+    count_stmt = select(func.count(Enrollment.course_id)).where(
+        Enrollment.student_id == student.student_id,
+        Enrollment.status == "approved",
+    )
     count_result = await db.execute(count_stmt)
     total = count_result.scalar() or 0
     
-    # Average score
+    # Average score (approved enrollments only)
     avg_stmt = select(func.avg(Enrollment.evaluation_score)).where(
         and_(
             Enrollment.student_id == student.student_id,
+            Enrollment.status == "approved",
             Enrollment.evaluation_score.isnot(None)
         )
     )
     avg_result = await db.execute(avg_stmt)
     avg_score = avg_result.scalar()
     
-    # Courses with score (completed)
+    # Courses with score (completed, approved only)
     completed_stmt = select(func.count(Enrollment.course_id)).where(
         and_(
             Enrollment.student_id == student.student_id,
+            Enrollment.status == "approved",
             Enrollment.evaluation_score.isnot(None)
         )
     )

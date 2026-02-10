@@ -66,12 +66,18 @@ export default function Navbar() {
                                     <Button variant={isActive('/instructor/courses') ? 'secondary' : 'ghost'} asChild className="h-8 text-sm">
                                         <Link href="/instructor/courses">My Courses</Link>
                                     </Button>
+                                    <Button variant={isActive('/instructor/proposals') ? 'secondary' : 'ghost'} asChild className="h-8 text-sm">
+                                        <Link href="/instructor/proposals">Proposals</Link>
+                                    </Button>
                                 </>
                             )}
                             {role === 'admin' && (
                                 <>
                                     <Button variant={isActive('/admin') ? 'secondary' : 'ghost'} asChild className="h-8 text-sm">
                                         <Link href="/admin">Dashboard</Link>
+                                    </Button>
+                                    <Button variant={isActive('/admin/approvals') ? 'secondary' : 'ghost'} asChild className="h-8 text-sm">
+                                        <Link href="/admin/approvals">Approvals</Link>
                                     </Button>
                                     <Button variant={isActive('/admin/users') ? 'secondary' : 'ghost'} asChild className="h-8 text-sm">
                                         <Link href="/admin/users">Users</Link>

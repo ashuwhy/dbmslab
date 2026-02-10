@@ -1,14 +1,21 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, timezone
 from typing import Annotated
 from jose import jwt
-from passlib.context import CryptContext
 from database import get_db
-from models import AppUser
-from schemas import UserCreate, UserResponse, Token, UserLogin
-from dependencies import get_current_user, RoleChecker, SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
+from models import AppUser, Student, Instructor
+from schemas import (
+    UserCreate,
+    UserResponse,
+    Token,
+    UserLogin,
+    StudentRegister,
+    InstructorRegister,
+    AnalystRegister,
+)
+from dependencies import get_current_user, SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
 
 router = APIRouter(
     prefix="/auth",
@@ -63,6 +70,77 @@ async def register(user: UserCreate, db: AsyncSession = Depends(get_db)):
     await db.refresh(db_user)
     return db_user
 
+@router.post("/register/student", response_model=UserResponse)
+async def register_student(data: StudentRegister, db: AsyncSession = Depends(get_db)):
+    """Self-registration for students. No approval required."""
+    result = await db.execute(select(AppUser).where(AppUser.email == data.email))
+    if result.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Email already registered")
+    if data.age < 13:
+        raise HTTPException(status_code=400, detail="Student must be at least 13 years old")
+    hashed = get_password_hash(data.password)
+    db_user = AppUser(email=data.email, password_hash=hashed, role="student")
+    db.add(db_user)
+    await db.flush()
+    student = Student(
+        email=data.email,
+        full_name=data.full_name,
+        age=data.age,
+        country=data.country,
+        skill_level=data.skill_level,
+        category="student",
+    )
+    db.add(student)
+    await db.commit()
+    await db.refresh(db_user)
+    return db_user
+
+
+@router.post("/register/instructor", response_model=UserResponse)
+async def register_instructor(data: InstructorRegister, db: AsyncSession = Depends(get_db)):
+    """Self-registration for instructors. Requires admin approval (approved_at set later)."""
+    result = await db.execute(select(AppUser).where(AppUser.email == data.email))
+    if result.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Email already registered")
+    hashed = get_password_hash(data.password)
+    db_user = AppUser(
+        email=data.email,
+        password_hash=hashed,
+        role="instructor",
+        approved_at=None,
+    )
+    db.add(db_user)
+    await db.flush()
+    instructor = Instructor(
+        full_name=data.full_name,
+        email=data.email,
+        teaching_years=data.teaching_years,
+    )
+    db.add(instructor)
+    await db.commit()
+    await db.refresh(db_user)
+    return db_user
+
+
+@router.post("/register/analyst", response_model=UserResponse)
+async def register_analyst(data: AnalystRegister, db: AsyncSession = Depends(get_db)):
+    """Self-registration for analysts. Requires admin approval (approved_at set later)."""
+    result = await db.execute(select(AppUser).where(AppUser.email == data.email))
+    if result.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Email already registered")
+    hashed = get_password_hash(data.password)
+    db_user = AppUser(
+        email=data.email,
+        password_hash=hashed,
+        role="analyst",
+        approved_at=None,
+    )
+    db.add(db_user)
+    await db.commit()
+    await db.refresh(db_user)
+    return db_user
+
+
 @router.post("/login", response_model=Token)
 async def login(user_data: UserLogin, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(AppUser).where(AppUser.email == user_data.email))
@@ -73,6 +151,13 @@ async def login(user_data: UserLogin, db: AsyncSession = Depends(get_db)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # Instructor and analyst need admin approval before using the platform
+    if user.role in ("instructor", "analyst") and getattr(user, "approved_at", None) is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="pending_approval",
         )
     
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
