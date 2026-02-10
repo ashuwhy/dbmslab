@@ -116,6 +116,7 @@ class Instructor(Base):
     instructor_id = Column(Integer, primary_key=True, autoincrement=True)
     full_name = Column(String(100), nullable=False)
     email = Column(String(100), unique=True)
+    teaching_years = Column(Integer, nullable=True)  # years of teaching experience
     user_id = Column(Integer, ForeignKey("app_user.id", ondelete="SET NULL"), nullable=True)
     
     # Relationships
