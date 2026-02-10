@@ -12,7 +12,7 @@ dev:
 	make -j 2 dev-api dev-web
 
 dev-api:
-	cd apps/api && . venv/bin/activate && uvicorn main:app --reload --host 0.0.0.0 --port 8000
+	cd apps/api && uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 dev-web:
 	cd apps/web && npm run dev

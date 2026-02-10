@@ -6,8 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { getRole } from '@/lib/auth';
 
+import { HugeiconsIcon } from '@hugeicons/react';
+import { BookOpen01Icon, TeacherIcon, ChartHistogramIcon, Mortarboard01Icon } from '@hugeicons/core-free-icons';
+
 const subscribe = (callback: () => void) => {
-  if (typeof window === 'undefined') return () => {};
+  if (typeof window === 'undefined') return () => { };
   window.addEventListener('storage', callback);
   window.addEventListener('auth-change', callback);
   return () => {
@@ -21,10 +24,10 @@ export default function Home() {
   const isLoggedIn = !!role;
 
   const features = [
-    { icon: '📚', title: 'Browse Courses', desc: 'Explore courses from top universities worldwide' },
-    { icon: '👨‍🏫', title: 'Expert Instructors', desc: 'Learn from industry leaders and academics' },
-    { icon: '📊', title: 'Track Progress', desc: 'Monitor your learning journey with analytics' },
-    { icon: '🎓', title: 'Get Certified', desc: 'Earn certificates and diplomas' },
+    { icon: <HugeiconsIcon icon={BookOpen01Icon} className="w-10 h-10 text-white" />, title: 'Browse Courses', desc: 'Explore courses from top universities worldwide' },
+    { icon: <HugeiconsIcon icon={TeacherIcon} className="w-10 h-10 text-white" />, title: 'Expert Instructors', desc: 'Learn from industry leaders and academics' },
+    { icon: <HugeiconsIcon icon={ChartHistogramIcon} className="w-10 h-10 text-white" />, title: 'Track Progress', desc: 'Monitor your learning journey with analytics' },
+    { icon: <HugeiconsIcon icon={Mortarboard01Icon} className="w-10 h-10 text-white" />, title: 'Get Certified', desc: 'Earn certificates and diplomas' },
   ];
 
   const dashboardHref =
