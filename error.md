@@ -10,3 +10,5 @@ StudentCoursesPage @ page.tsx:145
 Promise.all @ VM724 <anonymous>:1
 Promise.all @ VM724 <anonymous>:1
 Promise.all @ VM724 <anonymous>:1
+
+## Student coarse page - Total enrollment
