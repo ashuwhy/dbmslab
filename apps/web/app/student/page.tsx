@@ -110,25 +110,31 @@ export default function StudentDashboard() {
                 ) : (
                     <div className="grid gap-3">
                         {enrollments.map((enrollment) => (
-                            <Card key={enrollment.course_id} className="bg-zinc-900/50 border-zinc-800">
-                                <CardContent className="flex items-center justify-between p-4">
-                                    <div>
-                                        <p className="font-semibold text-white">{enrollment.course_name}</p>
-                                        <p className="text-sm text-zinc-500">
-                                            Enrolled: {new Date(enrollment.enroll_date).toLocaleDateString()}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        {enrollment.evaluation_score !== null ? (
-                                            <Badge variant={enrollment.evaluation_score >= 70 ? 'default' : enrollment.evaluation_score >= 50 ? 'secondary' : 'destructive'}>
-                                                Score: {enrollment.evaluation_score}%
-                                            </Badge>
-                                        ) : (
-                                            <Badge variant="outline">In Progress</Badge>
-                                        )}
-                                    </div>
-                                </CardContent>
-                            </Card>
+                            <Link
+                                key={enrollment.course_id}
+                                href={`/student/courses/${enrollment.course_id}`}
+                                className="block"
+                            >
+                                <Card className="bg-zinc-900/50 border-zinc-800 hover:border-zinc-700 transition-colors">
+                                    <CardContent className="flex items-center justify-between p-4">
+                                        <div>
+                                            <p className="font-semibold text-white">{enrollment.course_name}</p>
+                                            <p className="text-sm text-zinc-500">
+                                                Enrolled: {new Date(enrollment.enroll_date).toLocaleDateString()}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            {enrollment.evaluation_score !== null ? (
+                                                <Badge variant={enrollment.evaluation_score >= 70 ? 'default' : enrollment.evaluation_score >= 50 ? 'secondary' : 'destructive'}>
+                                                    Score: {enrollment.evaluation_score}%
+                                                </Badge>
+                                            ) : (
+                                                <Badge variant="outline">In Progress</Badge>
+                                            )}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </Link>
                         ))}
                     </div>
                 )}

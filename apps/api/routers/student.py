@@ -5,7 +5,7 @@ from sqlalchemy.orm import selectinload
 from typing import List, Optional
 from datetime import date
 from database import get_db
-from models import Course, Enrollment, Student, AppUser, University, Program, Topic, CourseTopic
+from models import Course, Enrollment, Student, AppUser, University, Program, Topic, CourseTopic, TeachingAssignment, Instructor
 from dependencies import get_current_user, RoleChecker
 from pydantic import BaseModel
 
@@ -34,6 +34,43 @@ class EnrollmentResponse(BaseModel):
     course_name: str
     enroll_date: date
     evaluation_score: Optional[int] = None
+    
+    class Config:
+        from_attributes = True
+
+class ContentItemResponse(BaseModel):
+    content_id: int
+    title: str
+    content_type: str
+    url: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class InstructorInfo(BaseModel):
+    instructor_id: int
+    full_name: str
+    email: Optional[str] = None
+    role: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class CourseDetailResponse(BaseModel):
+    course_id: int
+    course_name: str
+    duration_weeks: int
+    max_capacity: int
+    current_enrollment: int
+    university_name: Optional[str] = None
+    program_name: Optional[str] = None
+    textbook_title: Optional[str] = None
+    textbook_url: Optional[str] = None
+    topics: List[str] = []
+    evaluation_score: Optional[int] = None
+    enroll_date: Optional[date] = None
+    content_items: List[ContentItemResponse] = []
+    instructors: List[InstructorInfo] = []
     
     class Config:
         from_attributes = True
@@ -172,6 +209,99 @@ async def get_my_enrollments(
             evaluation_score=enrollment.evaluation_score
         ))
     return enrollments
+
+@router.get("/courses/{course_id}", response_model=CourseDetailResponse)
+async def get_course_detail(
+    course_id: int,
+    current_user: AppUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get course details for the current student (must be enrolled)."""
+    stmt = (
+        select(Course)
+        .options(
+            selectinload(Course.university),
+            selectinload(Course.program),
+            selectinload(Course.textbook),
+            selectinload(Course.topics).selectinload(CourseTopic.topic),
+            selectinload(Course.content_items),
+            selectinload(Course.teaching_assignments).selectinload(TeachingAssignment.instructor)
+        )
+        .where(Course.course_id == course_id)
+    )
+    result = await db.execute(stmt)
+    course = result.scalar_one_or_none()
+    
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+    
+    evaluation_score = None
+    enroll_date = None
+
+    if current_user.role != "admin":
+        student_result = await db.execute(select(Student).where(Student.email == current_user.email))
+        student = student_result.scalar_one_or_none()
+        
+        if not student:
+            raise HTTPException(status_code=404, detail="Student profile not found for this user")
+
+        enrollment_result = await db.execute(
+            select(Enrollment).where(
+                and_(
+                    Enrollment.student_id == student.student_id,
+                    Enrollment.course_id == course_id
+                )
+            )
+        )
+        enrollment = enrollment_result.scalar_one_or_none()
+        
+        if not enrollment:
+            raise HTTPException(status_code=403, detail="You are not enrolled in this course")
+        
+        evaluation_score = enrollment.evaluation_score
+        enroll_date = enrollment.enroll_date
+
+    content_items = []
+    if course.content_items:
+        content_items = [
+            ContentItemResponse(
+                content_id=item.content_id,
+                title=item.title,
+                content_type=item.content_type,
+                url=item.url
+            )
+            for item in course.content_items
+        ]
+
+    instructors = []
+    if course.teaching_assignments:
+        for assignment in course.teaching_assignments:
+            if assignment.instructor:
+                instructors.append(
+                    InstructorInfo(
+                        instructor_id=assignment.instructor.instructor_id,
+                        full_name=assignment.instructor.full_name,
+                        email=assignment.instructor.email,
+                        role=assignment.role
+                    )
+                )
+
+    return CourseDetailResponse(
+        course_id=course.course_id,
+        course_name=course.course_name,
+        duration_weeks=course.duration_weeks,
+        max_capacity=course.max_capacity,
+        current_enrollment=course.current_enrollment,
+        university_name=course.university.name if course.university else None,
+        program_name=course.program.program_name if course.program else None,
+        textbook_title=course.textbook.title if course.textbook else None,
+        textbook_url=course.textbook.url if course.textbook else None,
+        topics=[ct.topic.topic_name for ct in course.topics] if course.topics else [],
+        evaluation_score=evaluation_score,
+        enroll_date=enroll_date,
+        content_items=content_items,
+        instructors=instructors
+    )
 
 @router.get("/stats")
 async def get_student_stats(
