@@ -38,6 +38,17 @@ class EnrollmentResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
+class ApplicationResponse(BaseModel):
+    course_id: int
+    course_name: str
+    enroll_date: date
+    status: str
+
+    class Config:
+        from_attributes = True
+
+
 class ContentItemResponse(BaseModel):
     content_id: int
     title: str
