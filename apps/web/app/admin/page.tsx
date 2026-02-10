@@ -2,8 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { UserGroupIcon, BookOpen01Icon, Mortarboard01Icon, TeacherIcon, Note01Icon } from '@hugeicons/core-free-icons';
+
 import { fetchWithAuth } from '@/lib/auth';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+
 
 interface Stats {
     total_users: number;
@@ -39,15 +43,20 @@ export default function AdminDashboard() {
         );
     }
 
+
+
+    // ...
+
     const statCards = [
-        { label: 'Total Users', value: stats?.total_users || 0, icon: '👤' },
-        { label: 'Courses', value: stats?.total_courses || 0, icon: '📚' },
-        { label: 'Students', value: stats?.total_students || 0, icon: '🎓' },
-        { label: 'Instructors', value: stats?.total_instructors || 0, icon: '👨‍🏫' },
-        { label: 'Enrollments', value: stats?.total_enrollments || 0, icon: '📝' },
+        { label: 'Total Users', value: stats?.total_users || 0, icon: <HugeiconsIcon icon={UserGroupIcon} className="w-6 h-6 text-zinc-400" /> },
+        { label: 'Courses', value: stats?.total_courses || 0, icon: <HugeiconsIcon icon={BookOpen01Icon} className="w-6 h-6 text-zinc-400" /> },
+        { label: 'Students', value: stats?.total_students || 0, icon: <HugeiconsIcon icon={Mortarboard01Icon} className="w-6 h-6 text-zinc-400" /> },
+        { label: 'Instructors', value: stats?.total_instructors || 0, icon: <HugeiconsIcon icon={TeacherIcon} className="w-6 h-6 text-zinc-400" /> },
+        { label: 'Enrollments', value: stats?.total_enrollments || 0, icon: <HugeiconsIcon icon={Note01Icon} className="w-6 h-6 text-zinc-400" /> },
     ];
 
     const quickLinks = [
+        { href: '/admin/approvals', label: 'Pending Approvals', desc: 'Approve instructors, analysts, and course/topic proposals' },
         { href: '/admin/users', label: 'Manage Users', desc: 'Create and manage user accounts' },
         { href: '/admin/courses', label: 'Manage Courses', desc: 'View all courses and assignments' },
         { href: '/admin/students', label: 'Manage Students', desc: 'View and remove students' },

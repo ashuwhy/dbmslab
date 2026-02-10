@@ -1,9 +1,18 @@
 import os
+from pathlib import Path
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
 from dotenv import load_dotenv
 
-load_dotenv()
+# Walk up from this file to find .env at project root
+_current = Path(__file__).resolve().parent
+for _p in [_current, _current.parent, _current.parent.parent, _current.parent.parent.parent]:
+    _env_file = _p / ".env"
+    if _env_file.exists():
+        load_dotenv(_env_file)
+        break
+else:
+    load_dotenv()  # fallback
 
 DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")

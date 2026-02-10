@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { fetchWithAuth } from '@/lib/auth';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { Alert02Icon, StarIcon, Award01Icon, PartyIcon } from '@hugeicons/core-free-icons';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
@@ -307,7 +309,7 @@ export default function AnalystPage() {
             <Card className="bg-red-950/20 border-red-900/50">
                 <CardHeader>
                     <CardTitle className="text-lg text-red-400 flex items-center gap-2">
-                        ⚠️ At-Risk Students <span className="text-sm font-normal text-zinc-500">(Avg Score &lt; 50%)</span>
+                        <HugeiconsIcon icon={Alert02Icon} className="w-5 h-5" /> At-Risk Students <span className="text-sm font-normal text-zinc-500">(Avg Score &lt; 50%)</span>
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -322,8 +324,8 @@ export default function AnalystPage() {
                         <TableBody>
                             {atRiskStudents.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={3} className="text-center text-zinc-500 py-4">
-                                        No at-risk students found. Great job! 🎉
+                                    <TableCell colSpan={3} className="text-center text-zinc-500 py-4 flex flex-col items-center gap-2">
+                                        No at-risk students found. Great job! <HugeiconsIcon icon={PartyIcon} className="w-5 h-5 text-yellow-500" />
                                     </TableCell>
                                 </TableRow>
                             ) : (
@@ -346,7 +348,7 @@ export default function AnalystPage() {
             <div className="grid gap-4 md:grid-cols-2">
                 <Card className="bg-zinc-900/50 border-zinc-800">
                     <CardHeader>
-                        <CardTitle className="text-sm font-medium text-zinc-400">🏆 Most Popular Course</CardTitle>
+                        <CardTitle className="text-sm font-medium text-zinc-400 flex items-center gap-2"><HugeiconsIcon icon={Award01Icon} className="w-4 h-4" /> Most Popular Course</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <p className="text-2xl font-bold text-white">{popularCourse?.course || 'N/A'}</p>
@@ -355,7 +357,7 @@ export default function AnalystPage() {
                 </Card>
                 <Card className="bg-zinc-900/50 border-zinc-800">
                     <CardHeader>
-                        <CardTitle className="text-sm font-medium text-zinc-400">⭐ Top Indian AI Student</CardTitle>
+                        <CardTitle className="text-sm font-medium text-zinc-400 flex items-center gap-2"><HugeiconsIcon icon={StarIcon} className="w-4 h-4" /> Top Indian AI Student</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <p className="text-2xl font-bold text-white">{topStudent?.name || 'N/A'}</p>
@@ -363,6 +365,7 @@ export default function AnalystPage() {
                     </CardContent>
                 </Card>
             </div>
+
 
             {/* Charts Row */}
             <div className="grid gap-6 md:grid-cols-2">
@@ -490,6 +493,6 @@ export default function AnalystPage() {
                     </Table>
                 </CardContent>
             </Card>
-        </div>
+        </div >
     );
 }

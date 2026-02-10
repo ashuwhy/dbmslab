@@ -1,20 +1,39 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { useState, useEffect, useMemo } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 
-import { setAuth } from '@/lib/auth';
+import { setAuth, getRole } from '@/lib/auth';
 
-export default function LoginPage() {
+import { Suspense } from 'react';
+
+function LoginContent() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [checkingAuth, setCheckingAuth] = useState(true);
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const message = useMemo(() => searchParams.get('message')?.replace(/\+/g, ' ') ?? null, [searchParams]);
+
+    // If already logged in, redirect to dashboard or home (don't show login form)
+    useEffect(() => {
+        const role = getRole();
+        if (role) {
+            if (role === 'admin') router.replace('/admin');
+            else if (role === 'student') router.replace('/student');
+            else if (role === 'instructor') router.replace('/instructor');
+            else if (role === 'analyst') router.replace('/analyst');
+            else router.replace('/');
+        } else {
+            setCheckingAuth(false);
+        }
+    }, [router]);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -28,8 +47,17 @@ export default function LoginPage() {
                 body: JSON.stringify({ email, password }),
             });
 
+            if (res.status === 403) {
+                const data = await res.json().catch(() => ({}));
+                if (data.detail === 'pending_approval') {
+                    setError('Your account is pending admin approval. You will be able to sign in once an admin approves your registration.');
+                    return;
+                }
+            }
+
             if (!res.ok) {
-                throw new Error('Invalid credentials');
+                const data = await res.json().catch(() => ({}));
+                throw new Error(typeof data.detail === 'string' ? data.detail : 'Invalid credentials');
             }
 
             const data = await res.json();
@@ -51,6 +79,14 @@ export default function LoginPage() {
             setLoading(false);
         }
     };
+
+    if (checkingAuth) {
+        return (
+            <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center py-12 px-4">
+                <p className="text-zinc-500">Loading...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center py-12 px-4">
@@ -87,6 +123,11 @@ export default function LoginPage() {
                                 />
                             </div>
 
+                            {message && (
+                                <div className="p-3 bg-green-500/10 border border-green-500/20 text-green-400 text-sm text-center">
+                                    {message}
+                                </div>
+                            )}
                             {error && (
                                 <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-500 text-sm font-medium text-center">
                                     {error}
@@ -96,6 +137,14 @@ export default function LoginPage() {
                             <Button type="submit" className="w-full" disabled={loading}>
                                 {loading ? 'Signing in...' : 'Sign In'}
                             </Button>
+                            <div className="text-center text-sm text-zinc-500 pt-2">
+                                Don&apos;t have an account?{' '}
+                                <a href="/signup/student" className="text-blue-400 hover:underline">Sign up as Student</a>
+                                {' · '}
+                                <a href="/signup/instructor" className="text-blue-400 hover:underline">Instructor</a>
+                                {' · '}
+                                <a href="/signup/analyst" className="text-blue-400 hover:underline">Analyst</a>
+                            </div>
                         </form>
                     </CardContent>
                     {/* <CardFooter className="flex-col space-y-4 border-t border-zinc-800 pt-6">
@@ -113,5 +162,17 @@ export default function LoginPage() {
                 </div> */}
             </div>
         </div>
+    );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center py-12 px-4">
+                <p className="text-zinc-500">Loading...</p>
+            </div>
+        }>
+            <LoginContent />
+        </Suspense>
     );
 }
