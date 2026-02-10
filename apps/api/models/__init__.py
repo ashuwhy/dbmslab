@@ -116,9 +116,10 @@ class Instructor(Base):
     instructor_id = Column(Integer, primary_key=True, autoincrement=True)
     full_name = Column(String(100), nullable=False)
     email = Column(String(100), unique=True)
-    teaching_years = Column(Integer, nullable=True)
+    user_id = Column(Integer, ForeignKey("app_user.id", ondelete="SET NULL"), nullable=True)
     
     # Relationships
+    user = relationship("AppUser", foreign_keys=[user_id])
     teaching_assignments = relationship("TeachingAssignment", back_populates="instructor")
     course_proposals = relationship("CourseProposal", back_populates="instructor")
     topic_proposals = relationship("TopicProposal", back_populates="instructor")
