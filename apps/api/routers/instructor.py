@@ -681,7 +681,10 @@ async def get_course_analytics(
             else_=0
         )).label("at_risk"),
         func.avg(Enrollment.evaluation_score).label("avg_score"),
-    ).where(Enrollment.course_id == course_id)
+    ).where(
+        Enrollment.course_id == course_id,
+        Enrollment.status == "approved",
+    )
 
     result = await db.execute(stmt)
     row = result.one()
@@ -792,7 +795,7 @@ async def get_student_rankings(
             AVG(e.evaluation_score) OVER () AS class_avg
         FROM enrollment e
         JOIN student s ON s.student_id = e.student_id
-        WHERE e.course_id = :course_id
+        WHERE e.course_id = :course_id AND e.status = 'approved'
         ORDER BY rank ASC
     """)
 
@@ -953,7 +956,7 @@ async def safe_enroll_student(
 
         # Step 5: Insert enrollment (trigger auto-updates current_enrollment)
         await db.execute(
-            text("INSERT INTO enrollment (student_id, course_id, enroll_date, status) VALUES (:sid, :cid, CURRENT_DATE, 'active')"),
+            text("INSERT INTO enrollment (student_id, course_id, enroll_date, status) VALUES (:sid, :cid, CURRENT_DATE, 'approved')"),
             {"sid": student_id, "cid": course_id}
         )
 
