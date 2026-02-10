@@ -23,6 +23,8 @@ export default function StudentCoursesPage() {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
     const [enrolledIds, setEnrolledIds] = useState<Set<number>>(new Set());
+    /** course_id -> 'pending' | 'rejected' for applications not yet approved */
+    const [applicationStatus, setApplicationStatus] = useState<Map<number, 'pending' | 'rejected'>>(new Map());
 
     const loadCourses = async () => {
         setLoading(true);
@@ -50,7 +52,25 @@ export default function StudentCoursesPage() {
             const res = await fetchWithAuth(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/student/enrollments/me`);
             if (res.ok) {
                 const data = await res.json();
-                setEnrolledIds(new Set(data.map((e: any) => e.course_id)));
+                setEnrolledIds(new Set(data.map((e: { course_id: number }) => e.course_id)));
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    const loadApplications = async () => {
+        try {
+            const res = await fetchWithAuth(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/student/applications/me`);
+            if (res.ok) {
+                const data = await res.json();
+                const map = new Map<number, 'pending' | 'rejected'>();
+                for (const app of data as { course_id: number; status: string }[]) {
+                    if (app.status === 'pending' || app.status === 'rejected') {
+                        map.set(app.course_id, app.status as 'pending' | 'rejected');
+                    }
+                }
+                setApplicationStatus(map);
             }
         } catch (error) {
             console.error(error);
@@ -60,6 +80,7 @@ export default function StudentCoursesPage() {
     useEffect(() => {
         loadCourses();
         loadEnrollments();
+        loadApplications();
     }, []);
 
     const handleSearch = (e: React.FormEvent) => {
@@ -78,9 +99,11 @@ export default function StudentCoursesPage() {
             if (res.ok) {
                 setMessage('Application submitted. Instructor will review.');
                 loadEnrollments();
+                loadApplications();
             } else {
-                const err = await res.json();
-                setMessage(`Error: ${err.detail}`);
+                const err = await res.json().catch(() => ({}));
+                const detail = typeof err.detail === 'string' ? err.detail : Array.isArray(err.detail) ? err.detail.map((e: { msg?: string }) => e.msg ?? JSON.stringify(e)).join(', ') : String(err.detail ?? 'Request failed');
+                setMessage(`Error: ${detail}`);
             }
         } catch {
             setMessage('Enrollment failed');
@@ -146,11 +169,6 @@ export default function StudentCoursesPage() {
                         <div key={course.course_id} className="card hover:border-zinc-600">
                             <div className="flex items-start justify-between gap-4">
                                 <div className="flex-1">
-
-
-                                    // ... existing imports
-
-                                    // ... inside component
                                     <h3 className="text-lg font-semibold text-white">{course.course_name}</h3>
                                     <div className="flex items-center gap-3 mt-2 text-sm text-zinc-400">
                                         {course.university_name && (
@@ -172,6 +190,10 @@ export default function StudentCoursesPage() {
                                 <div>
                                     {enrolledIds.has(course.course_id) ? (
                                         <span className="badge badge-success flex items-center gap-1">Enrolled <HugeiconsIcon icon={CheckmarkCircle01Icon} className="w-3 h-3" /></span>
+                                    ) : applicationStatus.get(course.course_id) === 'pending' ? (
+                                        <span className="badge bg-amber-500/20 text-amber-400 border border-amber-500/30">Pending</span>
+                                    ) : applicationStatus.get(course.course_id) === 'rejected' ? (
+                                        <span className="badge bg-red-500/20 text-red-400 border border-red-500/30">Rejected</span>
                                     ) : (
                                         <button
                                             onClick={() => handleEnroll(course.course_id)}
