@@ -564,7 +564,10 @@ async def list_courses(db: AsyncSession = Depends(get_db)):
 async def list_universities(db: AsyncSession = Depends(get_db)):
     """List universities for course creation dropdown."""
     result = await db.execute(select(University))
-    return [{"university_id": u.university_id, "name": u.name} for u in result.scalars().all()]
+    return [
+        {"university_id": u.university_id, "name": u.name, "country": u.country}
+        for u in result.scalars().all()
+    ]
 
 
 @router.get("/programs")
@@ -815,12 +818,17 @@ async def create_university(
     db: AsyncSession = Depends(get_db)
 ):
     """Create a new university (admin only, enforced by router-level RoleChecker)."""
+    name = body.name.strip()
+    country = body.country.strip()
+    if not name or not country:
+        raise HTTPException(status_code=400, detail="University name and country are required")
+
     # Check for duplicate
-    existing = await db.execute(select(University).where(University.name == body.name))
+    existing = await db.execute(select(University).where(func.lower(University.name) == name.lower()))
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=409, detail="University with this name already exists")
 
-    uni = University(name=body.name, country=body.country)
+    uni = University(name=name, country=country)
     db.add(uni)
     try:
         await db.commit()

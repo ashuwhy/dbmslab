@@ -29,12 +29,18 @@ interface Instructor {
     email: string | null;
 }
 
+interface University {
+    university_id: number;
+    name: string;
+    country?: string;
+}
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 export default function AdminCoursesPage() {
     const [courses, setCourses] = useState<Course[]>([]);
     const [instructors, setInstructors] = useState<Instructor[]>([]);
-    const [universities, setUniversities] = useState<{ university_id: number; name: string }[]>([]);
+    const [universities, setUniversities] = useState<University[]>([]);
     const [programs, setPrograms] = useState<{ program_id: number; program_name: string }[]>([]);
     const [textbooks, setTextbooks] = useState<{ textbook_id: number; title: string }[]>([]);
     const [topics, setTopics] = useState<{ topic_id: number; topic_name: string }[]>([]);
@@ -51,6 +57,8 @@ export default function AdminCoursesPage() {
     const [createTextbookId, setCreateTextbookId] = useState('');
     const [createCapacity, setCreateCapacity] = useState('100');
     const [createTopicIds, setCreateTopicIds] = useState<number[]>([]);
+    const [createUniversityName, setCreateUniversityName] = useState('');
+    const [createUniversityCountry, setCreateUniversityCountry] = useState('');
 
     // Manage Instructors State
     const [managingCourse, setManagingCourse] = useState<Course | null>(null);
@@ -119,6 +127,34 @@ export default function AdminCoursesPage() {
             }
         } catch {
             setMessage('Failed to create course');
+        }
+    };
+
+    const handleCreateUniversity = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setMessage('');
+        try {
+            const res = await fetchWithAuth(`${API_URL}/admin/universities`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: createUniversityName,
+                    country: createUniversityCountry,
+                }),
+            });
+
+            if (res.ok) {
+                setMessage('University created');
+                setCreateUniversityName('');
+                setCreateUniversityCountry('');
+                fetchData();
+                return;
+            }
+
+            const err = await res.json();
+            setMessage(`Error: ${err.detail || 'Failed to create university'}`);
+        } catch {
+            setMessage('Failed to create university');
         }
     };
 
@@ -291,6 +327,39 @@ export default function AdminCoursesPage() {
                         </div>
                         <div className="md:col-span-2 lg:col-span-6">
                             <Button type="submit">Create course</Button>
+                        </div>
+                    </form>
+                </CardContent>
+            </Card>
+
+            {/* Create University */}
+            <Card className="bg-zinc-900/50 border-zinc-800">
+                <CardHeader>
+                    <CardTitle>Create University</CardTitle>
+                    <CardDescription>Add a university for course mapping.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <form onSubmit={handleCreateUniversity} className="grid gap-4 md:grid-cols-3">
+                        <div className="space-y-2 md:col-span-1">
+                            <Label>University name</Label>
+                            <Input
+                                value={createUniversityName}
+                                onChange={(e) => setCreateUniversityName(e.target.value)}
+                                required
+                                className="bg-black/20"
+                            />
+                        </div>
+                        <div className="space-y-2 md:col-span-1">
+                            <Label>Country</Label>
+                            <Input
+                                value={createUniversityCountry}
+                                onChange={(e) => setCreateUniversityCountry(e.target.value)}
+                                required
+                                className="bg-black/20"
+                            />
+                        </div>
+                        <div className="md:col-span-1 flex items-end">
+                            <Button type="submit" className="w-full">Create university</Button>
                         </div>
                     </form>
                 </CardContent>
