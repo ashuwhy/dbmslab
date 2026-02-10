@@ -1,11 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete, func, and_
 from sqlalchemy.orm import selectinload
 from typing import List, Optional
 from datetime import datetime, timezone
 from database import get_db
-from models import AppUser, TeachingAssignment, Student, Enrollment, Instructor, Course, University, Program, CourseProposal, TopicProposal, Topic, Textbook, Executive
+from models import AppUser, TeachingAssignment, Student, Enrollment, Instructor, Course, University, Program, CourseProposal, TopicProposal, Topic, Textbook, Executive, CourseTopic
 from dependencies import RoleChecker
 from routers.auth import get_password_hash
 from pydantic import BaseModel
@@ -84,6 +84,7 @@ class CourseUpdateRequest(BaseModel):
     duration_weeks: Optional[int] = None
     university_id: Optional[int] = None
     program_id: Optional[int] = None
+    topic_ids: Optional[List[int]] = None
 
 
 class CourseCreateRequest(BaseModel):
@@ -93,6 +94,11 @@ class CourseCreateRequest(BaseModel):
     program_id: int
     textbook_id: int
     max_capacity: Optional[int] = 100
+    topic_ids: Optional[List[int]] = []
+
+
+class ApproveCourseProposalRequest(BaseModel):
+    topic_ids: Optional[List[int]] = []
 
 
 class PendingInstructorResponse(BaseModel):
@@ -325,8 +331,14 @@ async def list_pending_course_proposals(db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/course-proposals/{proposal_id}/approve")
-async def approve_course_proposal(proposal_id: int, db: AsyncSession = Depends(get_db)):
-    """Create Course from proposal and assign instructor; set proposal status approved."""
+async def approve_course_proposal(
+    proposal_id: int,
+    body: Optional[ApproveCourseProposalRequest] = Body(None),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create Course from proposal, assign instructor, link topics; set proposal status approved."""
+    if body is None:
+        body = ApproveCourseProposalRequest()
     result = await db.execute(select(CourseProposal).where(CourseProposal.id == proposal_id, CourseProposal.status == "pending"))
     proposal = result.scalar_one_or_none()
     if not proposal:
@@ -345,6 +357,10 @@ async def approve_course_proposal(proposal_id: int, db: AsyncSession = Depends(g
         course_id=course.course_id,
         role="instructor",
     ))
+    for topic_id in body.topic_ids or []:
+        existing = (await db.execute(select(Topic).where(Topic.topic_id == topic_id))).scalar_one_or_none()
+        if existing:
+            db.add(CourseTopic(course_id=course.course_id, topic_id=topic_id))
     proposal.status = "approved"
     await db.commit()
     return {"message": "Course approved and created", "course_id": course.course_id}
@@ -411,9 +427,16 @@ async def reject_topic_proposal(proposal_id: int, db: AsyncSession = Depends(get
     return {"message": "Proposal rejected"}
 
 
+@router.get("/topics")
+async def list_topics(db: AsyncSession = Depends(get_db)):
+    """List all topics for linking to courses."""
+    result = await db.execute(select(Topic).order_by(Topic.topic_name))
+    return [{"topic_id": t.topic_id, "topic_name": t.topic_name} for t in result.scalars().all()]
+
+
 @router.post("/courses")
 async def create_course(body: CourseCreateRequest, db: AsyncSession = Depends(get_db)):
-    """Create a new course (admin)."""
+    """Create a new course (admin) and link topics via course_topic."""
     course = Course(
         course_name=body.course_name,
         duration_weeks=body.duration_weeks,
@@ -423,9 +446,54 @@ async def create_course(body: CourseCreateRequest, db: AsyncSession = Depends(ge
         max_capacity=body.max_capacity or 100,
     )
     db.add(course)
+    await db.flush()
+    topic_ids = body.topic_ids or []
+    for topic_id in topic_ids:
+        existing = (await db.execute(select(Topic).where(Topic.topic_id == topic_id))).scalar_one_or_none()
+        if existing:
+            db.add(CourseTopic(course_id=course.course_id, topic_id=topic_id))
     await db.commit()
     await db.refresh(course)
     return {"message": "Course created", "course_id": course.course_id}
+
+
+class CourseDetailForAdmin(BaseModel):
+    course_id: int
+    course_name: str
+    duration_weeks: int
+    university_id: int
+    program_id: int
+    textbook_id: int
+    max_capacity: int
+    topic_ids: List[int] = []
+
+    class Config:
+        from_attributes = True
+
+
+@router.get("/courses/{course_id}", response_model=CourseDetailForAdmin)
+async def get_course_for_admin(course_id: int, db: AsyncSession = Depends(get_db)):
+    """Get one course with topic_ids for admin edit. Joins course_topic in DB."""
+    stmt = (
+        select(Course)
+        .options(selectinload(Course.topics))
+        .where(Course.course_id == course_id)
+    )
+    result = await db.execute(stmt)
+    course = result.scalar_one_or_none()
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+    topic_ids = [ct.topic_id for ct in course.topics] if course.topics else []
+    return CourseDetailForAdmin(
+        course_id=course.course_id,
+        course_name=course.course_name,
+        duration_weeks=course.duration_weeks,
+        university_id=course.university_id,
+        program_id=course.program_id,
+        textbook_id=course.textbook_id,
+        max_capacity=course.max_capacity,
+        topic_ids=topic_ids,
+    )
 
 
 @router.get("/courses", response_model=List[CourseResponse])
@@ -630,7 +698,7 @@ async def update_course(
     course_update: CourseUpdateRequest,
     db: AsyncSession = Depends(get_db)
 ):
-    """Update course details."""
+    """Update course details and optionally replace topic links via course_topic."""
     result = await db.execute(select(Course).where(Course.course_id == course_id))
     course = result.scalar_one_or_none()
     if not course:
@@ -645,12 +713,19 @@ async def update_course(
     if course_update.program_id is not None:
         course.program_id = course_update.program_id
 
+    if course_update.topic_ids is not None:
+        await db.execute(delete(CourseTopic).where(CourseTopic.course_id == course_id))
+        for topic_id in course_update.topic_ids:
+            existing = (await db.execute(select(Topic).where(Topic.topic_id == topic_id))).scalar_one_or_none()
+            if existing:
+                db.add(CourseTopic(course_id=course_id, topic_id=topic_id))
+
     try:
         await db.commit()
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
-        
+
     await db.refresh(course)
     return {"message": "Course updated successfully"}
 
