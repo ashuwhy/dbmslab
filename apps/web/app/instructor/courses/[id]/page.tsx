@@ -53,6 +53,11 @@ interface Analytics {
     avg_score: number | null;
 }
 
+interface Course {
+    course_id: number;
+    course_name: string;
+}
+
 type TabKey = 'content' | 'students' | 'analytics';
 
 // ── Component ────────────────────────────────────────────────────
@@ -91,6 +96,17 @@ export default function CourseDetailPage() {
     const fetchStudents = useCallback(async () => {
         const res = await fetchWithAuth(`${API}/instructor/courses/${courseId}/students`);
         if (res.ok) setStudents(await res.json());
+    }, [courseId]);
+
+    const fetchCourseName = useCallback(async () => {
+        const res = await fetchWithAuth(`${API}/instructor/courses`);
+        if (!res.ok) return;
+
+        const courses: Course[] = await res.json();
+        const matchedCourse = courses.find((course) => course.course_id === Number(courseId));
+        if (matchedCourse) {
+            setCourseName(matchedCourse.course_name);
+        }
     }, [courseId]);
 
     const fetchAnalytics = useCallback(async () => {

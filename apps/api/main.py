@@ -5,9 +5,13 @@ from reports import router as reports
 
 app = FastAPI(title="Assignment IV API", version="1.0.0")
 
+# With allow_credentials=True, CORS spec forbids allow_origins="*"; use explicit origins.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

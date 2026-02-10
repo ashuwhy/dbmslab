@@ -104,7 +104,10 @@ export default function AdminApprovalsPage() {
     const approveCourseProposal = async (id: number) => {
         setMessage('');
         try {
-            const res = await fetchWithAuth(`${API_URL}/admin/course-proposals/${id}/approve`, { method: 'POST' });
+            const res = await fetchWithAuth(`${API_URL}/admin/course-proposals/${id}/approve`, {
+                method: 'POST',
+                body: JSON.stringify({}),
+            });
             if (res.ok) {
                 setMessage('Course proposal approved and course created');
                 load();
