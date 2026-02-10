@@ -58,7 +58,12 @@ interface Course {
     course_name: string;
 }
 
-type TabKey = 'content' | 'students' | 'analytics';
+type TabKey = 'content' | 'topics' | 'students' | 'analytics';
+
+interface TopicItem {
+    id: number;
+    name: string;
+}
 
 // ── Component ────────────────────────────────────────────────────
 
@@ -85,6 +90,11 @@ export default function CourseDetailPage() {
     const [gradeValue, setGradeValue] = useState('');
     const [gradeDialogOpen, setGradeDialogOpen] = useState(false);
     const [grading, setGrading] = useState(false);
+
+    // Topics
+    const [topics, setTopics] = useState<TopicItem[]>([]);
+    const [availableTopics, setAvailableTopics] = useState<TopicItem[]>([]);
+    const [selectedTopicId, setSelectedTopicId] = useState('');
 
     // ── Data Fetching ────────────────────────────────────────────
 
@@ -114,22 +124,23 @@ export default function CourseDetailPage() {
         if (res.ok) setAnalytics(await res.json());
     }, [courseId]);
 
+    const fetchTopics = useCallback(async () => {
+        const res = await fetchWithAuth(`${API}/instructor/courses/${courseId}/topics`);
+        if (res.ok) setTopics(await res.json());
+    }, [courseId]);
+
+    const fetchAvailableTopics = useCallback(async () => {
+        const res = await fetchWithAuth(`${API}/instructor/options/topics`);
+        if (res.ok) setAvailableTopics(await res.json());
+    }, []);
+
     useEffect(() => {
         const load = async () => {
-            // Fetch course name from the courses list
-            try {
-                const coursesRes = await fetchWithAuth(`${API}/instructor/courses`);
-                if (coursesRes.ok) {
-                    const courses = await coursesRes.json();
-                    const match = courses.find((c: { course_id: number }) => String(c.course_id) === courseId);
-                    if (match) setCourseName(match.course_name);
-                }
-            } catch { /* ignore */ }
-            await Promise.all([fetchContent(), fetchStudents()]);
+            await Promise.all([fetchContent(), fetchStudents(), fetchCourseName(), fetchTopics(), fetchAvailableTopics()]);
             setLoading(false);
         };
         load();
-    }, [fetchContent, fetchStudents, courseId]);
+    }, [fetchContent, fetchStudents, fetchCourseName, fetchTopics, fetchAvailableTopics]);
 
     useEffect(() => {
         if (activeTab === 'analytics' && !analytics) {
@@ -204,6 +215,40 @@ export default function CourseDetailPage() {
         }
     };
 
+    const handleAddTopic = async () => {
+        if (!selectedTopicId) return;
+        try {
+            const res = await fetchWithAuth(`${API}/instructor/courses/${courseId}/topics`, {
+                method: 'POST',
+                body: JSON.stringify({ topic_id: parseInt(selectedTopicId) }),
+            });
+            if (res.ok) {
+                setMessage({ text: 'Topic linked to course!', type: 'success' });
+                setSelectedTopicId('');
+                fetchTopics();
+            } else {
+                const err = await res.json();
+                setMessage({ text: `Error: ${err.detail}`, type: 'error' });
+            }
+        } catch {
+            setMessage({ text: 'Failed to add topic', type: 'error' });
+        }
+    };
+
+    const handleRemoveTopic = async (topicId: number) => {
+        try {
+            const res = await fetchWithAuth(`${API}/instructor/courses/${courseId}/topics/${topicId}`, {
+                method: 'DELETE',
+            });
+            if (res.ok) {
+                setMessage({ text: 'Topic removed.', type: 'success' });
+                fetchTopics();
+            }
+        } catch {
+            setMessage({ text: 'Failed to remove topic', type: 'error' });
+        }
+    };
+
     // ── Bulk Operations ──────────────────────────────────────────
 
     const handleExportCSV = () => {
@@ -254,6 +299,7 @@ export default function CourseDetailPage() {
 
     const tabs: { key: TabKey; label: string; count?: number }[] = [
         { key: 'content', label: 'Content', count: contentItems.length },
+        { key: 'topics', label: 'Topics', count: topics.length },
         { key: 'students', label: 'Students', count: students.length },
         { key: 'analytics', label: 'Analytics' },
     ];
@@ -416,7 +462,80 @@ export default function CourseDetailPage() {
                 </div>
             )}
 
-            {/* ═══════════════════════════ STUDENTS TAB ══════════════════════════ */}
+            {/* ═══════════════════════════ TOPICS TAB ═════════════════════════════ */}
+            {activeTab === 'topics' && (
+                <div className="grid gap-6 md:grid-cols-2">
+                    {/* Add Topic */}
+                    <Card className="bg-zinc-900/50 border-zinc-800">
+                        <CardHeader>
+                            <CardTitle className="text-lg text-white">Link Topic</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="topic-select" className="text-zinc-400">Select an approved topic</Label>
+                                    <select
+                                        id="topic-select"
+                                        value={selectedTopicId}
+                                        onChange={(e) => setSelectedTopicId(e.target.value)}
+                                        className="flex h-9 w-full rounded-none border border-zinc-700 bg-zinc-950 px-3 py-1 text-sm text-white shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                    >
+                                        <option value="">Choose a topic…</option>
+                                        {availableTopics
+                                            .filter(at => !topics.some(t => t.id === at.id))
+                                            .map(t => (
+                                                <option key={t.id} value={t.id}>{t.name}</option>
+                                            ))}
+                                    </select>
+                                </div>
+                                <Button onClick={handleAddTopic} disabled={!selectedTopicId} className="w-full">
+                                    Add Topic to Course
+                                </Button>
+                                <p className="text-xs text-zinc-600">
+                                    Don’t see your topic? <a href="/instructor/proposals" className="text-zinc-400 hover:text-white underline">Submit a topic proposal</a> first.
+                                </p>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Topic List */}
+                    <div className="space-y-3">
+                        <h3 className="text-lg font-semibold text-white">Linked Topics</h3>
+                        {topics.length === 0 ? (
+                            <Card className="bg-zinc-900/50 border-zinc-800 border-dashed">
+                                <CardContent className="flex flex-col items-center justify-center py-8 text-center text-zinc-500">
+                                    No topics linked yet. Use the form to link approved topics.
+                                </CardContent>
+                            </Card>
+                        ) : (
+                            <div className="space-y-2">
+                                {topics.map((topic) => (
+                                    <Card key={topic.id} className="bg-zinc-900/50 border-zinc-800">
+                                        <CardContent className="p-4 flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-xl">🎯</span>
+                                                <p className="font-medium text-white text-sm">{topic.name}</p>
+                                            </div>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleRemoveTopic(topic.id)}
+                                                className="text-zinc-500 hover:text-red-400 h-7 w-7 p-0"
+                                            >
+                                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
+                                            </Button>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* ═══════════════════════════ STUDENTS TAB ══════════════════════════ */}\n
             {activeTab === 'students' && (
                 <div className="space-y-4">
                     {/* Bulk Operations Bar */}

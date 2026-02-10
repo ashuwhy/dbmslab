@@ -5,7 +5,7 @@ from sqlalchemy.orm import selectinload
 from typing import List, Optional
 from datetime import date
 from database import get_db
-from models import Course, TeachingAssignment, ContentItem, Instructor, AppUser, Enrollment, Student, AuditLog, CourseProposal, TopicProposal, University, Program, Textbook, Topic
+from models import Course, TeachingAssignment, ContentItem, Instructor, AppUser, Enrollment, Student, AuditLog, CourseProposal, TopicProposal, University, Program, Textbook, Topic, CourseTopic
 from dependencies import get_current_user, RoleChecker
 from pydantic import BaseModel, Field
 from datetime import datetime
@@ -118,6 +118,10 @@ class CourseProposalCreate(BaseModel):
 
 class TopicProposalCreate(BaseModel):
     topic_name: str
+
+
+class TopicLinkRequest(BaseModel):
+    topic_id: int
 
 
 class CourseProposalResponse(BaseModel):
@@ -705,6 +709,93 @@ async def get_course_analytics(
         total_students=total,
         avg_score=round(row.avg_score, 2) if row.avg_score else None
     )
+
+# ── Topic ↔ Course Linking ────────────────────────────────────────
+
+@router.get("/options/topics")
+async def list_topics(db: AsyncSession = Depends(get_db)):
+    """List all available topics."""
+    result = await db.execute(select(Topic.topic_id, Topic.topic_name))
+    return [{"id": r[0], "name": r[1]} for r in result]
+
+
+@router.get("/courses/{course_id}/topics")
+async def get_course_topics(
+    course_id: int,
+    current_user: AppUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Get topics linked to a course."""
+    instructor = await get_instructor_from_user(current_user, db)
+    await verify_course_ownership(instructor, course_id, current_user, db)
+
+    stmt = (
+        select(Topic)
+        .join(CourseTopic, CourseTopic.topic_id == Topic.topic_id)
+        .where(CourseTopic.course_id == course_id)
+    )
+    result = await db.execute(stmt)
+    topics = result.scalars().all()
+    return [{"id": t.topic_id, "name": t.topic_name} for t in topics]
+
+
+@router.post("/courses/{course_id}/topics")
+async def add_topic_to_course(
+    course_id: int,
+    body: TopicLinkRequest,
+    current_user: AppUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Link an approved topic to a course."""
+    instructor = await get_instructor_from_user(current_user, db)
+    await verify_course_ownership(instructor, course_id, current_user, db)
+
+    # Verify topic exists
+    topic_res = await db.execute(select(Topic).where(Topic.topic_id == body.topic_id))
+    topic = topic_res.scalar_one_or_none()
+    if not topic:
+        raise HTTPException(status_code=404, detail="Topic not found")
+
+    # Check if already linked
+    existing = await db.execute(
+        select(CourseTopic).where(
+            and_(
+                CourseTopic.course_id == course_id,
+                CourseTopic.topic_id == body.topic_id
+            )
+        )
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="Topic already linked to this course")
+
+    new_link = CourseTopic(course_id=course_id, topic_id=body.topic_id)
+    db.add(new_link)
+    await db.commit()
+    return {"message": "Topic added to course"}
+
+
+@router.delete("/courses/{course_id}/topics/{topic_id}")
+async def remove_topic_from_course(
+    course_id: int,
+    topic_id: int,
+    current_user: AppUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Remove a topic from a course."""
+    instructor = await get_instructor_from_user(current_user, db)
+    await verify_course_ownership(instructor, course_id, current_user, db)
+
+    await db.execute(
+        sql_delete(CourseTopic).where(
+            and_(
+                CourseTopic.course_id == course_id,
+                CourseTopic.topic_id == topic_id
+            )
+        )
+    )
+    await db.commit()
+    return {"message": "Topic removed from course"}
+
 
 # ── GET /instructor/stats ────────────────────────────────────────
 

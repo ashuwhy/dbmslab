@@ -10,3 +10,4 @@ python-multipart==0.0.10
 psycopg2-binary==2.9.10
 python-dotenv==1.0.1
 bcrypt==4.2.1
+requests
