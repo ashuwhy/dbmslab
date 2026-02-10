@@ -201,7 +201,7 @@ export default function AnalystPage() {
                 </Card>
             </div>
 
-            {/* 🔥 NEW REPORTS SECTION STARTS HERE 🔥 */}
+            {/* NEW REPORTS SECTION STARTS HERE */}
             <div className="space-y-4">
                 <h2 className="text-2xl font-bold tracking-tight text-white">Advanced Reports</h2>
                 <p className="text-zinc-400">In-depth analysis of module performance, instructor effectiveness, and student risks.</p>
