@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Date, Float, DateTime, Text, CheckConstraint
+from sqlalchemy import Column, Integer, String, ForeignKey, Date, Float, DateTime, Text, CheckConstraint, Index
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -69,6 +69,13 @@ class Course(Base):
     university_id = Column(Integer, ForeignKey("university.university_id"), nullable=False)
     program_id = Column(Integer, ForeignKey("program.program_id"), nullable=False)
     textbook_id = Column(Integer, ForeignKey("textbook.textbook_id"), nullable=False)
+    max_capacity = Column(Integer, default=100, nullable=False)
+    current_enrollment = Column(Integer, default=0, nullable=False)
+    
+    __table_args__ = (
+        Index("idx_course_duration", "duration_weeks"),
+        Index("idx_course_name_trgm", "course_name"), # Placeholder for trgm, might need extension
+    )
     
     # Relationships
     university = relationship("University", back_populates="courses")
@@ -125,6 +132,10 @@ class Student(Base):
     category = Column(String(50))  # student/professional
     skill_level = Column(String(50))  # beginner/intermediate/advanced
     
+    __table_args__ = (
+        Index("idx_student_country", "country"),
+    )
+    
     # Relationships
     enrollments = relationship("Enrollment", back_populates="student")
 
@@ -137,10 +148,27 @@ class Enrollment(Base):
     enroll_date = Column(Date, nullable=False)
     evaluation_score = Column(Integer)
     
+    __table_args__ = (
+        Index("idx_enrollment_score", "evaluation_score"),
+    )
+    
     # Relationships
     student = relationship("Student", back_populates="enrollments")
     course = relationship("Course", back_populates="enrollments")
 
+
+
+# Audit Log for Grade Changes (Trigger Implementation)
+class AuditLog(Base):
+    __tablename__ = "audit_log"
+    
+    log_id = Column(Integer, primary_key=True, autoincrement=True)
+    student_id = Column(Integer, nullable=False)
+    course_id = Column(Integer, nullable=False)
+    old_score = Column(Integer)
+    new_score = Column(Integer)
+    changed_by = Column(String(100)) # e.g., "instructor_1"
+    changed_at = Column(DateTime(timezone=True), server_default=func.now())
 
 class ContentItem(Base):
     __tablename__ = "content_item"

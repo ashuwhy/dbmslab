@@ -118,6 +118,21 @@ async def enroll_course(
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Already enrolled in this course")
 
+    # Lock the course row to prevent race conditions (Concurrency Control)
+    # This prevents multiple students from grabbing the last seat simultaneously
+    course_stmt = select(Course).where(Course.course_id == request.course_id).with_for_update()
+    course_result = await db.execute(course_stmt)
+    course = course_result.scalar_one_or_none()
+    
+    if not course:
+        raise HTTPException(status_code=404, detail="Course not found")
+        
+    if course.current_enrollment >= course.max_capacity:
+        raise HTTPException(status_code=400, detail="Course is full")
+
+    # Increment enrollment count
+    course.current_enrollment += 1
+
     # Create enrollment
     new_enrollment = Enrollment(
         student_id=student.student_id,
