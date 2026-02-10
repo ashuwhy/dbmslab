@@ -12,9 +12,9 @@ app.add_middleware(
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "https://dbmslab-ten.vercel.app",
-        "https://dbmslab-ten.vercel.app:3000",
-        "https://dbmslab-ten.vercel.app:8000",
+        "https://dbmslab-dlh8.onrender.com"
     ],
+    allow_origin_regex=r"https://dbmslab.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
