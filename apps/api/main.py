@@ -9,12 +9,8 @@ app = FastAPI(title="Assignment IV API", version="1.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "https://dbmslab-ten.vercel.app",
-        "https://dbmslab-dlh8.onrender.com"
+        "*"
     ],
-    allow_origin_regex=r"https://dbmslab.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
