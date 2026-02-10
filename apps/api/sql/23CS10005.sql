@@ -304,3 +304,6 @@ CREATE INDEX idx_topic_proposal_instructor ON public.topic_proposal USING btree 
 
 -- Indices
 CREATE UNIQUE INDEX university_name_key ON public.university USING btree (name);
+
+-- NOTE: Enrollment counter trigger (fn_auto_update_enrollment_count / trg_auto_enrollment_count)
+-- is created by seed_data.py — do not duplicate here.

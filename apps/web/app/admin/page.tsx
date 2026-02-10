@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { UserGroupIcon, BookOpen01Icon, Mortarboard01Icon, TeacherIcon, Note01Icon } from '@hugeicons/core-free-icons';
@@ -20,20 +20,24 @@ interface Stats {
 export default function AdminDashboard() {
     const [stats, setStats] = useState<Stats | null>(null);
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+
+    const fetchStats = useCallback(async (isRefresh = false) => {
+        try {
+            if (isRefresh) setRefreshing(true);
+            const res = await fetchWithAuth(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/admin/stats`);
+            if (res.ok) setStats(await res.json());
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    }, []);
 
     useEffect(() => {
-        const fetchStats = async () => {
-            try {
-                const res = await fetchWithAuth(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/admin/stats`);
-                if (res.ok) setStats(await res.json());
-            } catch (error) {
-                console.error(error);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchStats();
-    }, []);
+    }, [fetchStats]);
 
     if (loading) {
         return (
@@ -65,9 +69,23 @@ export default function AdminDashboard() {
 
     return (
         <div className="space-y-8">
-            <div className="space-y-2">
-                <h1 className="text-3xl font-bold tracking-tight text-white">Admin Dashboard</h1>
-                <p className="text-zinc-400">System overview and management</p>
+            <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                    <h1 className="text-3xl font-bold tracking-tight text-white">Admin Dashboard</h1>
+                    <p className="text-zinc-400">System overview and management</p>
+                </div>
+                <button
+                    onClick={() => fetchStats(true)}
+                    disabled={refreshing}
+                    className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm rounded-lg border border-zinc-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                    {refreshing ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-zinc-300"></div>
+                    ) : (
+                        <span>↻</span>
+                    )}
+                    Refresh
+                </button>
             </div>
 
             {/* Stats Grid */}

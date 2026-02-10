@@ -178,8 +178,7 @@ async def enroll_course(
     if course.current_enrollment >= course.max_capacity:
         raise HTTPException(status_code=400, detail="Course is full")
 
-    # Increment enrollment count
-    course.current_enrollment += 1
+    # current_enrollment is auto-incremented by DB trigger trg_auto_enrollment_count
 
     # Create enrollment as pending (instructor must approve)
     new_enrollment = Enrollment(

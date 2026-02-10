@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { fetchWithAuth } from '@/lib/auth';
 import { HugeiconsIcon } from '@hugeicons/react';
 import { Alert02Icon, StarIcon, Award01Icon, PartyIcon } from '@hugeicons/core-free-icons';
@@ -93,59 +93,63 @@ export default function AnalystPage() {
     const [topicTrends, setTopicTrends] = useState<TopicTrend[]>([]);
 
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+
+    const fetchData = useCallback(async (isRefresh = false) => {
+        try {
+            if (isRefresh) setRefreshing(true);
+            const endpoints = [
+                '/analytics/stats',
+                '/analytics/most-popular-course',
+                '/analytics/enrollments-per-course',
+                '/analytics/avg-score-by-course',
+                '/analytics/top-indian-student-by-ai-average',
+                '/analytics/courses-by-university',
+                '/analytics/students-by-country',
+                '/analytics/skill-level-distribution',
+                '/analytics/top-courses?limit=5',
+                // New Report Endpoints
+                '/reports/module-analytics',
+                '/reports/instructor-performance',
+                '/reports/at-risk-students?threshold=50',
+                '/reports/topic-trends'
+            ];
+
+            const responses = await Promise.all(
+                endpoints.map(ep =>
+                    fetchWithAuth(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${ep}`)
+                )
+            );
+
+            const [r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12] = responses;
+
+            if (r0.ok) setStats(await r0.json());
+            if (r1.ok) setPopularCourse(await r1.json());
+            if (r2.ok) setEnrollments(await r2.json());
+            if (r3.ok) setAvgScores(await r3.json());
+            if (r4.ok) setTopStudent(await r4.json());
+            if (r5.ok) setByUniversity(await r5.json());
+            if (r6.ok) setByCountry(await r6.json());
+            if (r7.ok) setBySkill(await r7.json());
+            if (r8.ok) setTopCourses(await r8.json());
+
+            // Set New Report Data
+            if (r9.ok) setModuleAnalytics(await r9.json());
+            if (r10.ok) setInstructorPerformance(await r10.json());
+            if (r11.ok) setAtRiskStudents(await r11.json());
+            if (r12.ok) setTopicTrends(await r12.json());
+
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    }, []);
 
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const endpoints = [
-                    '/analytics/stats',
-                    '/analytics/most-popular-course',
-                    '/analytics/enrollments-per-course',
-                    '/analytics/avg-score-by-course',
-                    '/analytics/top-indian-student-by-ai-average',
-                    '/analytics/courses-by-university',
-                    '/analytics/students-by-country',
-                    '/analytics/skill-level-distribution',
-                    '/analytics/top-courses?limit=5',
-                    // New Report Endpoints
-                    '/reports/module-analytics',
-                    '/reports/instructor-performance',
-                    '/reports/at-risk-students?threshold=50', // Adjusted threshold example
-                    '/reports/topic-trends'
-                ];
-
-                const responses = await Promise.all(
-                    endpoints.map(ep =>
-                        fetchWithAuth(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}${ep}`)
-                    )
-                );
-
-                const [r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12] = responses;
-
-                if (r0.ok) setStats(await r0.json());
-                if (r1.ok) setPopularCourse(await r1.json());
-                if (r2.ok) setEnrollments(await r2.json());
-                if (r3.ok) setAvgScores(await r3.json());
-                if (r4.ok) setTopStudent(await r4.json());
-                if (r5.ok) setByUniversity(await r5.json());
-                if (r6.ok) setByCountry(await r6.json());
-                if (r7.ok) setBySkill(await r7.json());
-                if (r8.ok) setTopCourses(await r8.json());
-
-                // Set New Report Data
-                if (r9.ok) setModuleAnalytics(await r9.json());
-                if (r10.ok) setInstructorPerformance(await r10.json());
-                if (r11.ok) setAtRiskStudents(await r11.json());
-                if (r12.ok) setTopicTrends(await r12.json());
-
-            } catch (error) {
-                console.error(error);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchData();
-    }, []);
+    }, [fetchData]);
 
     if (loading) {
         return (
@@ -160,9 +164,23 @@ export default function AnalystPage() {
 
     return (
         <div className="space-y-8 pb-10">
-            <div className="space-y-2">
-                <h1 className="text-3xl font-bold tracking-tight text-white">Analytics Dashboard</h1>
-                <p className="text-zinc-400">Platform statistics and insights</p>
+            <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                    <h1 className="text-3xl font-bold tracking-tight text-white">Analytics Dashboard</h1>
+                    <p className="text-zinc-400">Platform statistics and insights</p>
+                </div>
+                <button
+                    onClick={() => fetchData(true)}
+                    disabled={refreshing}
+                    className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm rounded-lg border border-zinc-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                    {refreshing ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-zinc-300"></div>
+                    ) : (
+                        <span>↻</span>
+                    )}
+                    Refresh
+                </button>
             </div>
 
             {/* Overview Stats */}

@@ -11,8 +11,10 @@ from main import app
 from database import get_db, Base, DATABASE_URL
 import asyncio
 from typing import AsyncGenerator, Generator
+from sqlalchemy.pool import NullPool
+
 # Create a new engine for testing
-test_engine = create_async_engine(DATABASE_URL, echo=False)
+test_engine = create_async_engine(DATABASE_URL, echo=False, poolclass=NullPool)
 
 # Testing SessionLocal
 TestingSessionLocal = sessionmaker(

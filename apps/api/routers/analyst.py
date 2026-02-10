@@ -79,15 +79,27 @@ async def avg_score_by_course(db: AsyncSession = Depends(get_db)):
 
 @router.get("/top-indian-student-by-ai-average")
 async def top_indian_student(db: AsyncSession = Depends(get_db)):
-    """Get the top Indian student by average score in AI-topic courses."""
+    """
+    Get the top Indian student by average score in AI-topic courses.
+
+    Reporting Definitions:
+      - "Indian" = student.country ILIKE '%India%'
+        (catches 'India', 'Republic of India', etc.)
+      - "AI" = topic_name ILIKE '%AI%' OR topic_name ILIKE '%Artificial Intelligence%'
+        (catches 'AI', 'AI/ML', 'Deep Learning AI', 'Artificial Intelligence', etc.)
+    """
     stmt = (
         select(Student.full_name, func.avg(Enrollment.evaluation_score).label("avg_score"))
         .join(Enrollment, Student.student_id == Enrollment.student_id)
         .join(Course, Enrollment.course_id == Course.course_id)
         .join(CourseTopic, CourseTopic.course_id == Course.course_id)
         .join(Topic, CourseTopic.topic_id == Topic.topic_id)
-        .where(Student.country == "India")
-        .where(Topic.topic_name == "AI")
+        # "Indian" definition: case-insensitive partial match on country
+        .where(Student.country.ilike("%India%"))
+        # "AI" definition: topic name contains 'AI' or 'Artificial Intelligence'
+        .where(
+            Topic.topic_name.ilike("%AI%") | Topic.topic_name.ilike("%Artificial Intelligence%")
+        )
         .group_by(Student.student_id, Student.full_name)
         .order_by(desc("avg_score"))
         .limit(1)

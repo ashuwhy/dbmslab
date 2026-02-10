@@ -255,21 +255,8 @@ async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
         stu_result = await db.execute(select(Student).where(Student.email == user.email))
         student = stu_result.scalar_one_or_none()
         if student:
-            # enrollments cascade via DB FK, but decrement counters first
-            enr_result = await db.execute(
-                select(Enrollment.course_id).where(Enrollment.student_id == student.student_id)
-            )
-            course_ids = [row[0] for row in enr_result]
-            if course_ids:
-                await db.execute(
-                    delete(Enrollment).where(Enrollment.student_id == student.student_id)
-                )
-                for cid in course_ids:
-                    await db.execute(
-                        Course.__table__.update()
-                        .where(Course.course_id == cid)
-                        .values(current_enrollment=Course.current_enrollment - 1)
-                    )
+            # Delete enrollments (trigger trg_auto_enrollment_count auto-decrements counters)
+            await db.execute(delete(Enrollment).where(Enrollment.student_id == student.student_id))
             await db.execute(delete(Student).where(Student.student_id == student.student_id))
 
     elif user.role == "instructor":
@@ -663,27 +650,13 @@ async def delete_student(
     student_id: int,
     db: AsyncSession = Depends(get_db)
 ):
-    """Delete a student and cascade to enrollments, decrementing course counters."""
+    """Delete a student and cascade to enrollments (trigger handles counter updates)."""
     student = (await db.execute(select(Student).where(Student.student_id == student_id))).scalar_one_or_none()
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
 
-    # Get all courses the student is enrolled in to decrement counters
-    enr_result = await db.execute(
-        select(Enrollment.course_id).where(Enrollment.student_id == student_id)
-    )
-    course_ids = [row[0] for row in enr_result]
-
-    # Delete enrollments
+    # Delete enrollments (trigger trg_auto_enrollment_count auto-decrements counters)
     await db.execute(delete(Enrollment).where(Enrollment.student_id == student_id))
-
-    # Decrement current_enrollment for each course
-    for cid in course_ids:
-        await db.execute(
-            Course.__table__.update()
-            .where(Course.course_id == cid)
-            .values(current_enrollment=Course.current_enrollment - 1)
-        )
 
     # Also remove the linked AppUser if it exists
     if student.email:
@@ -699,7 +672,7 @@ async def delete_enrollment(
     course_id: int,
     db: AsyncSession = Depends(get_db)
 ):
-    """Delete an enrollment and decrement the course's current_enrollment counter."""
+    """Delete an enrollment (trigger handles counter update)."""
     # Check enrollment exists
     enr_result = await db.execute(
         select(Enrollment).where(
@@ -711,17 +684,12 @@ async def delete_enrollment(
     if not enrollment:
         raise HTTPException(status_code=404, detail="Enrollment not found")
 
+    # Delete — trigger trg_auto_enrollment_count auto-decrements course.current_enrollment
     await db.execute(
         delete(Enrollment).where(
             (Enrollment.student_id == student_id) &
             (Enrollment.course_id == course_id)
         )
-    )
-    # Decrement the course enrollment counter
-    await db.execute(
-        Course.__table__.update()
-        .where(Course.course_id == course_id)
-        .values(current_enrollment=Course.current_enrollment - 1)
     )
     await db.commit()
     return {"message": "Enrollment deleted"}
@@ -850,7 +818,7 @@ async def create_university(
     # Check for duplicate
     existing = await db.execute(select(University).where(University.name == body.name))
     if existing.scalar_one_or_none():
-        raise HTTPException(status_code=400, detail="University with this name already exists")
+        raise HTTPException(status_code=409, detail="University with this name already exists")
 
     uni = University(name=body.name, country=body.country)
     db.add(uni)
@@ -860,4 +828,9 @@ async def create_university(
         await db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
     await db.refresh(uni)
-    return {"message": "University created", "university_id": uni.university_id}
+    return {
+        "university_id": uni.university_id,
+        "name": uni.name,
+        "country": uni.country,
+        "message": "University created"
+    }
