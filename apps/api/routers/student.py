@@ -301,12 +301,23 @@ async def get_course_detail(
                     )
                 )
 
+    # Live count of approved enrollments (fixes stale current_enrollment counter)
+    approved_count_result = await db.execute(
+        select(func.count(Enrollment.student_id)).where(
+            and_(
+                Enrollment.course_id == course_id,
+                Enrollment.status == "approved"
+            )
+        )
+    )
+    live_enrollment_count = approved_count_result.scalar() or 0
+
     return CourseDetailResponse(
         course_id=course.course_id,
         course_name=course.course_name,
         duration_weeks=course.duration_weeks,
         max_capacity=course.max_capacity,
-        current_enrollment=course.current_enrollment,
+        current_enrollment=live_enrollment_count,
         university_name=course.university.name if course.university else None,
         program_name=course.program.program_name if course.program else None,
         textbook_title=course.textbook.title if course.textbook else None,

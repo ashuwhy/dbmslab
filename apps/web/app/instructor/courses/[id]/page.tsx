@@ -30,7 +30,6 @@ interface ContentItem {
     url: string | null;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 interface Student {
     student_id: number;
@@ -67,6 +66,7 @@ export default function CourseDetailPage() {
     const [contentItems, setContentItems] = useState<ContentItem[]>([]);
     const [students, setStudents] = useState<Student[]>([]);
     const [analytics, setAnalytics] = useState<Analytics | null>(null);
+    const [courseName, setCourseName] = useState<string>('');
     const [loading, setLoading] = useState(true);
 
     // Add Content form
@@ -100,11 +100,20 @@ export default function CourseDetailPage() {
 
     useEffect(() => {
         const load = async () => {
+            // Fetch course name from the courses list
+            try {
+                const coursesRes = await fetchWithAuth(`${API}/instructor/courses`);
+                if (coursesRes.ok) {
+                    const courses = await coursesRes.json();
+                    const match = courses.find((c: { course_id: number }) => String(c.course_id) === courseId);
+                    if (match) setCourseName(match.course_name);
+                }
+            } catch { /* ignore */ }
             await Promise.all([fetchContent(), fetchStudents()]);
             setLoading(false);
         };
         load();
-    }, [fetchContent, fetchStudents]);
+    }, [fetchContent, fetchStudents, courseId]);
 
     useEffect(() => {
         if (activeTab === 'analytics' && !analytics) {
@@ -246,7 +255,7 @@ export default function CourseDetailPage() {
             {/* Header */}
             <div className="space-y-2">
                 <h1 className="text-3xl font-bold tracking-tight text-white">
-                    Course #{courseId}
+                    {courseName || `Course #${courseId}`}
                 </h1>
                 <p className="text-zinc-400">Manage content, grade students, and view analytics</p>
             </div>
@@ -258,8 +267,8 @@ export default function CourseDetailPage() {
                         key={tab.key}
                         onClick={() => setActiveTab(tab.key)}
                         className={`px-4 py-2.5 text-sm font-medium transition-colors relative ${activeTab === tab.key
-                                ? 'text-white'
-                                : 'text-zinc-500 hover:text-zinc-300'
+                            ? 'text-white'
+                            : 'text-zinc-500 hover:text-zinc-300'
                             }`}
                     >
                         {tab.label}
@@ -279,8 +288,8 @@ export default function CourseDetailPage() {
             {/* Feedback Message */}
             {message.text && (
                 <div className={`px-4 py-3 text-sm border ${message.type === 'success'
-                        ? 'bg-emerald-950/50 text-emerald-400 border-emerald-800'
-                        : 'bg-red-950/50 text-red-400 border-red-800'
+                    ? 'bg-emerald-950/50 text-emerald-400 border-emerald-800'
+                    : 'bg-red-950/50 text-red-400 border-red-800'
                     }`}>
                     {message.text}
                 </div>
