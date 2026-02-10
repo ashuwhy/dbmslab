@@ -30,7 +30,6 @@ interface ContentItem {
     url: string | null;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 interface Student {
     student_id: number;
@@ -77,7 +76,7 @@ export default function CourseDetailPage() {
     const [contentItems, setContentItems] = useState<ContentItem[]>([]);
     const [students, setStudents] = useState<Student[]>([]);
     const [analytics, setAnalytics] = useState<Analytics | null>(null);
-    const [courseName, setCourseName] = useState('');
+    const [courseName, setCourseName] = useState<string>('');
     const [loading, setLoading] = useState(true);
 
     // Add Content form
