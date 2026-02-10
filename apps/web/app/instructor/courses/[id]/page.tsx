@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { fetchWithAuth } from '@/lib/auth';
 import { useParams } from 'next/navigation';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { CameraVideoIcon, BookOpen01Icon, Note01Icon, File01Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons';
 
 interface ContentItem {
     content_id: number;
@@ -83,10 +85,10 @@ export default function CourseContentPage() {
 
     const getContentIcon = (type: string) => {
         switch (type) {
-            case 'video': return '🎬';
-            case 'book': return '📚';
-            case 'notes': return '📝';
-            default: return '📄';
+            case 'video': return <HugeiconsIcon icon={CameraVideoIcon} className="w-5 h-5" />;
+            case 'book': return <HugeiconsIcon icon={BookOpen01Icon} className="w-5 h-5" />;
+            case 'notes': return <HugeiconsIcon icon={Note01Icon} className="w-5 h-5" />;
+            default: return <HugeiconsIcon icon={File01Icon} className="w-5 h-5" />;
         }
     };
 
@@ -193,9 +195,9 @@ export default function CourseContentPage() {
                                                 href={item.url}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="text-sm text-blue-400 hover:underline"
+                                                className="text-sm text-blue-400 hover:underline flex items-center gap-1"
                                             >
-                                                Open →
+                                                Open <HugeiconsIcon icon={ArrowRight01Icon} className="w-3 h-3" />
                                             </a>
                                         )}
                                     </div>

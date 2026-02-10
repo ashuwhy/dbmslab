@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { fetchWithAuth } from '@/lib/auth';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { ArrowRight01Icon } from '@hugeicons/core-free-icons';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
@@ -103,7 +105,7 @@ export default function StudentDashboard() {
                         <CardContent className="flex flex-col items-center justify-center py-8 text-center">
                             <p className="text-zinc-500 mb-4">You haven&apos;t enrolled in any courses yet.</p>
                             <Button variant="link" asChild>
-                                <Link href="/student/courses">Browse available courses →</Link>
+                                <Link href="/student/courses" className="flex items-center gap-1">Browse available courses <HugeiconsIcon icon={ArrowRight01Icon} className="w-4 h-4" /></Link>
                             </Button>
                         </CardContent>
                     </Card>

@@ -2,7 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+
 import { fetchWithAuth } from '@/lib/auth';
+import { HugeiconsIcon } from '@hugeicons/react';
+import { Calendar03Icon, UserGroupIcon } from '@hugeicons/core-free-icons';
 
 interface Course {
     course_id: number;
@@ -57,10 +60,14 @@ export default function InstructorCoursesPage() {
                         <div key={course.course_id} className="card">
                             <div className="flex items-center justify-between">
                                 <div>
+
+
+
+
                                     <h3 className="text-lg font-semibold text-white">{course.course_name}</h3>
                                     <div className="flex items-center gap-4 mt-2 text-sm text-zinc-400">
-                                        <span>📅 {course.duration_weeks} weeks</span>
-                                        <span>👥 {course.student_count} students</span>
+                                        <span className="flex items-center gap-1"><HugeiconsIcon icon={Calendar03Icon} className="w-4 h-4" /> {course.duration_weeks} weeks</span>
+                                        <span className="flex items-center gap-1"><HugeiconsIcon icon={UserGroupIcon} className="w-4 h-4" /> {course.student_count} students</span>
                                     </div>
                                 </div>
                                 <div className="flex gap-2">
