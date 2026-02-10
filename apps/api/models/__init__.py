@@ -15,6 +15,17 @@ class AppUser(Base):
     approved_at = Column(DateTime(timezone=True), nullable=True)  # set when admin approves instructor/analyst
 
 
+# Executive: admin and analyst (name and role type stored here)
+class Executive(Base):
+    __tablename__ = "executive"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    app_user_id = Column(Integer, ForeignKey("app_user.id", ondelete="CASCADE"), unique=True, nullable=False)
+    full_name = Column(String(100), nullable=False)
+    executive_type = Column(String(20), nullable=False)  # 'admin' | 'analyst'
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
 # Domain tables matching 23CS10005_A2.sql schema
 class University(Base):
     __tablename__ = "university"

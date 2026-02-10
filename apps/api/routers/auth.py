@@ -5,7 +5,7 @@ from datetime import timedelta, datetime, timezone
 from typing import Annotated
 from jose import jwt
 from database import get_db
-from models import AppUser, Student, Instructor
+from models import AppUser, Student, Instructor, Executive
 from schemas import (
     UserCreate,
     UserResponse,
@@ -124,7 +124,7 @@ async def register_instructor(data: InstructorRegister, db: AsyncSession = Depen
 
 @router.post("/register/analyst", response_model=UserResponse)
 async def register_analyst(data: AnalystRegister, db: AsyncSession = Depends(get_db)):
-    """Self-registration for analysts. Requires admin approval (approved_at set later)."""
+    """Self-registration for analysts. Requires admin approval (approved_at set later). Name saved in executive table."""
     result = await db.execute(select(AppUser).where(AppUser.email == data.email))
     if result.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -136,6 +136,13 @@ async def register_analyst(data: AnalystRegister, db: AsyncSession = Depends(get
         approved_at=None,
     )
     db.add(db_user)
+    await db.flush()
+    executive = Executive(
+        app_user_id=db_user.id,
+        full_name=data.full_name,
+        executive_type="analyst",
+    )
+    db.add(executive)
     await db.commit()
     await db.refresh(db_user)
     return db_user

@@ -5,7 +5,7 @@ from sqlalchemy.orm import selectinload
 from typing import List, Optional
 from datetime import datetime, timezone
 from database import get_db
-from models import AppUser, TeachingAssignment, Student, Enrollment, Instructor, Course, University, Program, CourseProposal, TopicProposal, Topic, Textbook
+from models import AppUser, TeachingAssignment, Student, Enrollment, Instructor, Course, University, Program, CourseProposal, TopicProposal, Topic, Textbook, Executive
 from dependencies import RoleChecker
 from routers.auth import get_password_hash
 from pydantic import BaseModel
@@ -187,6 +187,18 @@ async def create_user(
         )
         db.add(instructor)
     
+    # If role is admin or analyst, create Executive record (stores full_name)
+    if user.role in ("admin", "analyst"):
+        if not user.full_name:
+            raise HTTPException(status_code=400, detail="Full name is required for admin and analyst users")
+        await db.flush()
+        executive = Executive(
+            app_user_id=db_user.id,
+            full_name=user.full_name,
+            executive_type=user.role,
+        )
+        db.add(executive)
+
     # If role is student, create Student record
     if user.role == "student":
         if not all([user.full_name, user.age, user.country]):
