@@ -2,14 +2,16 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 
 import { setAuth, getRole } from '@/lib/auth';
 
-export default function LoginPage() {
+import { Suspense } from 'react';
+
+function LoginContent() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -160,5 +162,17 @@ export default function LoginPage() {
                 </div> */}
             </div>
         </div>
+    );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center py-12 px-4">
+                <p className="text-zinc-500">Loading...</p>
+            </div>
+        }>
+            <LoginContent />
+        </Suspense>
     );
 }
