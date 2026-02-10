@@ -20,6 +20,8 @@ import {
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 // ── Types ────────────────────────────────────────────────────────
+import { HugeiconsIcon } from '@hugeicons/react';
+import { CameraVideoIcon, BookOpen01Icon, Note01Icon, File01Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons';
 
 interface ContentItem {
     content_id: number;
@@ -28,11 +30,20 @@ interface ContentItem {
     url: string | null;
 }
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
 interface Student {
     student_id: number;
     full_name: string;
     email: string | null;
     evaluation_score: number | null;
+}
+
+interface Application {
+    student_id: number;
+    full_name: string;
+    email: string | null;
+    enroll_date: string;
 }
 
 interface Analytics {
