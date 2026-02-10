@@ -54,6 +54,11 @@ interface Analytics {
     avg_score: number | null;
 }
 
+interface Course {
+    course_id: number;
+    course_name: string;
+}
+
 type TabKey = 'content' | 'students' | 'analytics';
 
 // ── Component ────────────────────────────────────────────────────
@@ -67,6 +72,7 @@ export default function CourseDetailPage() {
     const [contentItems, setContentItems] = useState<ContentItem[]>([]);
     const [students, setStudents] = useState<Student[]>([]);
     const [analytics, setAnalytics] = useState<Analytics | null>(null);
+    const [courseName, setCourseName] = useState('');
     const [loading, setLoading] = useState(true);
 
     // Add Content form
@@ -93,6 +99,17 @@ export default function CourseDetailPage() {
         if (res.ok) setStudents(await res.json());
     }, [courseId]);
 
+    const fetchCourseName = useCallback(async () => {
+        const res = await fetchWithAuth(`${API}/instructor/courses`);
+        if (!res.ok) return;
+
+        const courses: Course[] = await res.json();
+        const matchedCourse = courses.find((course) => course.course_id === Number(courseId));
+        if (matchedCourse) {
+            setCourseName(matchedCourse.course_name);
+        }
+    }, [courseId]);
+
     const fetchAnalytics = useCallback(async () => {
         const res = await fetchWithAuth(`${API}/instructor/courses/${courseId}/analytics`);
         if (res.ok) setAnalytics(await res.json());
@@ -100,11 +117,11 @@ export default function CourseDetailPage() {
 
     useEffect(() => {
         const load = async () => {
-            await Promise.all([fetchContent(), fetchStudents()]);
+            await Promise.all([fetchContent(), fetchStudents(), fetchCourseName()]);
             setLoading(false);
         };
         load();
-    }, [fetchContent, fetchStudents]);
+    }, [fetchContent, fetchStudents, fetchCourseName]);
 
     useEffect(() => {
         if (activeTab === 'analytics' && !analytics) {
@@ -246,7 +263,7 @@ export default function CourseDetailPage() {
             {/* Header */}
             <div className="space-y-2">
                 <h1 className="text-3xl font-bold tracking-tight text-white">
-                    Course #{courseId}
+                    {courseName || `Course #${courseId}`}
                 </h1>
                 <p className="text-zinc-400">Manage content, grade students, and view analytics</p>
             </div>
