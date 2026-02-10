@@ -15,7 +15,13 @@
 ## Instructor
 
 - `GET /instructor/courses`: List courses assigned to the current instructor.
-- `POST /instructor/courses/{course_id}/content-items`: Add content to a course.
+- `GET /instructor/courses/{course_id}/students`: List all students enrolled in a course.
+- `GET /instructor/courses/{course_id}/content-items`: List all content items for a course.
+- `POST /instructor/courses/{course_id}/content-items`: Add content to a course. Body: `{ "content_type": "string", "title": "string", "url": "string" }`.
+- `DELETE /instructor/courses/{course_id}/content-items/{content_id}`: Delete a content item from a course.
+- `PUT /instructor/enrollments/{student_id}/{course_id}`: Grade a student. Body: `{ "evaluation_score": int }`. Logged to `audit_log`.
+- `GET /instructor/courses/{course_id}/analytics`: Get course analytics (score distribution, pass rate, at-risk count).
+- `GET /instructor/stats`: Get aggregate statistics for the current instructor.
 
 ## Admin
 
