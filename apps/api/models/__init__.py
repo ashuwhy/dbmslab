@@ -13,6 +13,9 @@ class AppUser(Base):
     role = Column(String, nullable=False)  # admin, instructor, student, analyst
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     approved_at = Column(DateTime(timezone=True), nullable=True)  # set when admin approves instructor/analyst
+    
+    # Relationships
+    executive = relationship("Executive", back_populates="user", uselist=False, cascade="all, delete-orphan", passive_deletes=True)
 
 
 # Executive: admin and analyst (name and role type stored here)
@@ -21,6 +24,9 @@ class Executive(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     app_user_id = Column(Integer, ForeignKey("app_user.id", ondelete="CASCADE"), unique=True, nullable=False)
+    
+    # Relationships
+    user = relationship("AppUser", back_populates="executive")
     full_name = Column(String(100), nullable=False)
     executive_type = Column(String(20), nullable=False)  # 'admin' | 'analyst'
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -121,7 +127,7 @@ class Instructor(Base):
     
     # Relationships
     user = relationship("AppUser", foreign_keys=[user_id])
-    teaching_assignments = relationship("TeachingAssignment", back_populates="instructor")
+    teaching_assignments = relationship("TeachingAssignment", back_populates="instructor", cascade="all, delete-orphan", passive_deletes=True)
     course_proposals = relationship("CourseProposal", back_populates="instructor")
     topic_proposals = relationship("TopicProposal", back_populates="instructor")
 

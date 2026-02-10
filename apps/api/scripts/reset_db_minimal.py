@@ -20,6 +20,31 @@ async def main():
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
     print("   Tables recreated.")
+    
+    print("   Creating Trigger for Enrollment Count...")
+    async with engine.begin() as conn:
+        await conn.execute(text("""
+        CREATE OR REPLACE FUNCTION fn_update_enrollment_count()
+        RETURNS TRIGGER AS $$
+        BEGIN
+            IF TG_OP = 'INSERT' THEN
+                UPDATE course SET current_enrollment = current_enrollment + 1
+                WHERE course_id = NEW.course_id;
+            ELSIF TG_OP = 'DELETE' THEN
+                UPDATE course SET current_enrollment = current_enrollment - 1
+                WHERE course_id = OLD.course_id;
+            END IF;
+            RETURN NULL;
+        END;
+        $$ LANGUAGE plpgsql;
+        """))
+        await conn.execute(text("""
+        CREATE TRIGGER trg_auto_enrollment_count
+        AFTER INSERT OR DELETE ON enrollment
+        FOR EACH ROW EXECUTE FUNCTION fn_update_enrollment_count();
+        """))
+    print("   Trigger created.")
+
 
     print("2. Creating ONLY Admin user...")
     async with AsyncSessionLocal() as session:

@@ -305,5 +305,21 @@ CREATE INDEX idx_topic_proposal_instructor ON public.topic_proposal USING btree 
 -- Indices
 CREATE UNIQUE INDEX university_name_key ON public.university USING btree (name);
 
--- NOTE: Enrollment counter trigger (fn_auto_update_enrollment_count / trg_auto_enrollment_count)
--- is created by seed_data.py — do not duplicate here.
+-- Trigger for automatic enrollment count
+CREATE OR REPLACE FUNCTION fn_update_enrollment_count()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        UPDATE course SET current_enrollment = current_enrollment + 1
+        WHERE course_id = NEW.course_id;
+    ELSIF TG_OP = 'DELETE' THEN
+        UPDATE course SET current_enrollment = current_enrollment - 1
+        WHERE course_id = OLD.course_id;
+    END IF;
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_auto_enrollment_count
+AFTER INSERT OR DELETE ON enrollment
+FOR EACH ROW EXECUTE FUNCTION fn_update_enrollment_count();

@@ -1099,3 +1099,9 @@ async def create_textbook(
         raise HTTPException(status_code=400, detail=str(e))
     await db.refresh(textbook)
     return {"message": "Textbook created", "textbook_id": textbook.textbook_id}
+
+@router.get("/textbooks")
+async def list_textbooks(db: AsyncSession = Depends(get_db)):
+    """List all textbooks."""
+    result = await db.execute(select(Textbook).order_by(Textbook.title))
+    return [{"textbook_id": t.textbook_id, "title": t.title, "isbn": t.isbn, "url": t.url} for t in result.scalars().all()]

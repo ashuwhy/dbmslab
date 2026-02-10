@@ -24,6 +24,7 @@ export default function AdminUsersPage() {
     const [age, setAge] = useState('');
     const [country, setCountry] = useState('');
     const [skillLevel, setSkillLevel] = useState('beginner');
+    const [teachingYears, setTeachingYears] = useState('');
     const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(true);
 
@@ -52,6 +53,9 @@ export default function AdminUsersPage() {
                 body.age = parseInt(age);
                 body.country = country;
                 body.skill_level = skillLevel;
+            } else if (role === 'instructor') {
+                body.full_name = fullName;
+                body.teaching_years = parseInt(teachingYears);
             }
 
             const res = await fetchWithAuth(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/admin/users`, {
@@ -67,6 +71,7 @@ export default function AdminUsersPage() {
                 setFullName('');
                 setAge('');
                 setCountry('');
+                setTeachingYears('');
                 loadUsers();
             } else {
                 const err = await res.json();
@@ -205,6 +210,34 @@ export default function AdminUsersPage() {
                                             <option value="intermediate" className="bg-zinc-900">Intermediate</option>
                                             <option value="advanced" className="bg-zinc-900">Advanced</option>
                                         </select>
+                                    </div>
+                                </>
+                            )}
+
+                            {role === 'instructor' && (
+                                <>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="fullName">Full Name</Label>
+                                        <Input
+                                            id="fullName"
+                                            required
+                                            value={fullName}
+                                            onChange={(e) => setFullName(e.target.value)}
+                                            placeholder="Prof. Jane Doe"
+                                            className="bg-black/20"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="teachingYears">Teaching Experience (Years)</Label>
+                                        <Input
+                                            id="teachingYears"
+                                            type="number"
+                                            required
+                                            value={teachingYears}
+                                            onChange={(e) => setTeachingYears(e.target.value)}
+                                            placeholder="5"
+                                            className="bg-black/20"
+                                        />
                                     </div>
                                 </>
                             )}
