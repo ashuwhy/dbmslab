@@ -1,20 +1,35 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 
-import { setAuth } from '@/lib/auth';
+import { setAuth, getRole } from '@/lib/auth';
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [checkingAuth, setCheckingAuth] = useState(true);
     const router = useRouter();
+
+    // If already logged in, redirect to dashboard or home (don't show login form)
+    useEffect(() => {
+        const role = getRole();
+        if (role) {
+            if (role === 'admin') router.replace('/admin');
+            else if (role === 'student') router.replace('/student');
+            else if (role === 'instructor') router.replace('/instructor');
+            else if (role === 'analyst') router.replace('/analyst');
+            else router.replace('/');
+        } else {
+            setCheckingAuth(false);
+        }
+    }, [router]);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -51,6 +66,14 @@ export default function LoginPage() {
             setLoading(false);
         }
     };
+
+    if (checkingAuth) {
+        return (
+            <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center py-12 px-4">
+                <p className="text-zinc-500">Loading...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center py-12 px-4">
