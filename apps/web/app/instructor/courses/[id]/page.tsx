@@ -477,6 +477,12 @@ export default function CourseDetailPage() {
           Manage content, grade students, and view analytics
         </p>
       </div>
+      {applications.length > 0 && (
+        <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-950/40 border border-amber-800/60 rounded text-amber-200 text-sm">
+          <span className="font-medium">{applications.length} pending enrollment request{applications.length !== 1 ? "s" : ""}.</span>
+          <span className="text-amber-200/80">Go to the <strong>Students</strong> or <strong>Applications</strong> tab to approve or reject.</span>
+        </div>
+      )}
       {/* Tabs */}
       <div className="flex border-b border-zinc-800">
         {tabs.map((tab) => (
