@@ -23,7 +23,6 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -35,7 +34,6 @@ import {
   BookOpen01Icon,
   Note01Icon,
   File01Icon,
-  ArrowRight01Icon,
   Target01Icon,
 } from "@hugeicons/core-free-icons";
 
@@ -73,7 +71,7 @@ interface Course {
   course_name: string;
 }
 
-type TabKey = "content" | "topics" | "students" | "analytics";
+type TabKey = "content" | "topics" | "students" | "analytics" | "applications";
 
 interface TopicItem {
   id: number;
@@ -90,6 +88,8 @@ export default function CourseDetailPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("content");
   const [contentItems, setContentItems] = useState<ContentItem[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [applicationsLoadError, setApplicationsLoadError] = useState<string | null>(null);
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [courseName, setCourseName] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -111,6 +111,9 @@ export default function CourseDetailPage() {
   const [availableTopics, setAvailableTopics] = useState<TopicItem[]>([]);
   const [selectedTopicId, setSelectedTopicId] = useState("");
 
+  // Applications
+  const [processingApp, setProcessingApp] = useState<number | null>(null);
+
   // ── Data Fetching ────────────────────────────────────────────
 
   const fetchContent = useCallback(async () => {
@@ -125,6 +128,21 @@ export default function CourseDetailPage() {
       `${API}/instructor/courses/${courseId}/students`,
     );
     if (res.ok) setStudents(await res.json());
+  }, [courseId]);
+
+  const fetchApplications = useCallback(async () => {
+    setApplicationsLoadError(null);
+    const res = await fetchWithAuth(
+      `${API}/instructor/courses/${courseId}/applications`,
+    );
+    if (res.ok) {
+      setApplications(await res.json());
+    } else {
+      setApplications([]);
+      const err = await res.json().catch(() => ({}));
+      const detail = typeof err.detail === "string" ? err.detail : "Could not load enrollment requests.";
+      setApplicationsLoadError(detail);
+    }
   }, [courseId]);
 
   const fetchCourseName = useCallback(async () => {
@@ -178,6 +196,12 @@ export default function CourseDetailPage() {
     fetchTopics,
     fetchAvailableTopics,
   ]);
+
+  useEffect(() => {
+    if (activeTab === "students" || activeTab === "applications") {
+      fetchApplications();
+    }
+  }, [activeTab, fetchApplications]);
 
   useEffect(() => {
     if (activeTab === "analytics" && !analytics) {
@@ -298,6 +322,55 @@ export default function CourseDetailPage() {
     }
   };
 
+  const handleApproveApplication = async (studentId: number) => {
+    setProcessingApp(studentId);
+    try {
+      const res = await fetchWithAuth(
+        `${API}/instructor/courses/${courseId}/applications/approve`,
+        {
+          method: "POST",
+          body: JSON.stringify({ student_id: studentId }),
+        }
+      );
+      if (res.ok) {
+        setMessage({ text: "Application approved", type: "success" });
+        fetchApplications();
+        fetchStudents(); // Refresh student list as approved student moves there
+      } else {
+        const err = await res.json();
+        setMessage({ text: `Error: ${err.detail}`, type: "error" });
+      }
+    } catch {
+      setMessage({ text: "Failed to approve application", type: "error" });
+    } finally {
+      setProcessingApp(null);
+    }
+  };
+
+  const handleRejectApplication = async (studentId: number) => {
+    setProcessingApp(studentId);
+    try {
+      const res = await fetchWithAuth(
+        `${API}/instructor/courses/${courseId}/applications/reject`,
+        {
+          method: "POST",
+          body: JSON.stringify({ student_id: studentId }),
+        }
+      );
+      if (res.ok) {
+        setMessage({ text: "Application rejected", type: "success" });
+        fetchApplications();
+      } else {
+        const err = await res.json();
+        setMessage({ text: `Error: ${err.detail}`, type: "error" });
+      }
+    } catch {
+      setMessage({ text: "Failed to reject application", type: "error" });
+    } finally {
+      setProcessingApp(null);
+    }
+  };
+
   // ── Bulk Operations ──────────────────────────────────────────
 
   const handleExportCSV = () => {
@@ -381,6 +454,7 @@ export default function CourseDetailPage() {
     { key: "content", label: "Content", count: contentItems.length },
     { key: "topics", label: "Topics", count: topics.length },
     { key: "students", label: "Students", count: students.length },
+    { key: "applications", label: "Applications", count: applications.length },
     { key: "analytics", label: "Analytics" },
   ];
 
@@ -410,16 +484,16 @@ export default function CourseDetailPage() {
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             className={`px-4 py-2.5 text-sm font-medium transition-colors relative ${activeTab === tab.key
-                ? "text-white"
-                : "text-zinc-500 hover:text-zinc-300"
+              ? "text-white"
+              : "text-zinc-500 hover:text-zinc-300"
               }`}
           >
             {tab.label}
             {tab.count !== undefined && (
               <span
                 className={`ml-2 text-xs px-1.5 py-0.5 rounded-sm ${activeTab === tab.key
-                    ? "bg-zinc-700 text-zinc-200"
-                    : "bg-zinc-800 text-zinc-500"
+                  ? "bg-zinc-700 text-zinc-200"
+                  : "bg-zinc-800 text-zinc-500"
                   }`}
               >
                 {tab.count}
@@ -435,8 +509,8 @@ export default function CourseDetailPage() {
       {message.text && (
         <div
           className={`px-4 py-3 text-sm border ${message.type === "success"
-              ? "bg-emerald-950/50 text-emerald-400 border-emerald-800"
-              : "bg-red-950/50 text-red-400 border-red-800"
+            ? "bg-emerald-950/50 text-emerald-400 border-emerald-800"
+            : "bg-red-950/50 text-red-400 border-red-800"
             }`}
         >
           {message.text}
@@ -677,6 +751,68 @@ export default function CourseDetailPage() {
       {/* ═══════════════════════════ STUDENTS TAB ══════════════════════════ */}
       {activeTab === "students" && (
         <div className="space-y-4">
+          {applicationsLoadError && (
+            <div className="px-4 py-3 text-sm bg-red-950/50 text-red-400 border border-red-800 rounded">
+              {applicationsLoadError}
+            </div>
+          )}
+          {/* Pending applications — approve/reject so students can get enrolled */}
+          {applications.length > 0 && (
+            <Card className="bg-amber-950/30 border-amber-800/60">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base text-amber-200">
+                  Pending applications ({applications.length})
+                </CardTitle>
+                <p className="text-xs text-zinc-400">
+                  Approve or reject enrollment requests. Approved students will appear in the list below.
+                </p>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-zinc-800 hover:bg-transparent">
+                      <TableHead className="text-zinc-400 font-medium">Name</TableHead>
+                      <TableHead className="text-zinc-400 font-medium">Email</TableHead>
+                      <TableHead className="text-zinc-400 font-medium">Apply Date</TableHead>
+                      <TableHead className="text-zinc-400 font-medium text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {applications.map((app) => (
+                      <TableRow key={app.student_id} className="border-zinc-800/50">
+                        <TableCell className="text-white font-medium">{app.full_name}</TableCell>
+                        <TableCell className="text-zinc-400 text-sm">{app.email || "N/A"}</TableCell>
+                        <TableCell className="text-zinc-400 text-sm">
+                          {new Date(app.enroll_date).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="border-red-900 text-red-400 hover:bg-red-950 hover:text-red-300"
+                              onClick={() => handleRejectApplication(app.student_id)}
+                              disabled={processingApp === app.student_id}
+                            >
+                              {processingApp === app.student_id ? "..." : "Reject"}
+                            </Button>
+                            <Button
+                              size="sm"
+                              className="bg-emerald-600 text-white hover:bg-emerald-700"
+                              onClick={() => handleApproveApplication(app.student_id)}
+                              disabled={processingApp === app.student_id}
+                            >
+                              {processingApp === app.student_id ? "..." : "Approve"}
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
           {/* Bulk Operations Bar */}
           {students.length > 0 && (
             <div className="flex items-center justify-between">
@@ -812,6 +948,86 @@ export default function CourseDetailPage() {
                           </svg>
                           Grade
                         </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* ═══════════════════════════ APPLICATIONS TAB ════════════════════════ */}
+      {activeTab === "applications" && (
+        <div className="space-y-4">
+          {applicationsLoadError && (
+            <div className="px-4 py-3 text-sm bg-red-950/50 text-red-400 border border-red-800 rounded">
+              {applicationsLoadError}
+            </div>
+          )}
+          {applications.length === 0 && !applicationsLoadError ? (
+            <Card className="bg-zinc-900/50 border-zinc-800 border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-12 text-center text-zinc-500">
+                <svg
+                  className="w-12 h-12 mb-4 text-zinc-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                <p className="text-sm font-medium">No pending applications.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="bg-zinc-900/50 border-zinc-800 overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-zinc-800 hover:bg-transparent">
+                    <TableHead className="text-zinc-400 font-medium">Name</TableHead>
+                    <TableHead className="text-zinc-400 font-medium">Email</TableHead>
+                    <TableHead className="text-zinc-400 font-medium">Apply Date</TableHead>
+                    <TableHead className="text-zinc-400 font-medium text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {applications.map((app) => (
+                    <TableRow key={app.student_id} className="border-zinc-800/50">
+                      <TableCell className="text-white font-medium">
+                        {app.full_name}
+                      </TableCell>
+                      <TableCell className="text-zinc-400 text-sm">
+                        {app.email || "N/A"}
+                      </TableCell>
+                      <TableCell className="text-zinc-400 text-sm">
+                        {new Date(app.enroll_date).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-red-900 text-red-400 hover:bg-red-950 hover:text-red-300"
+                            onClick={() => handleRejectApplication(app.student_id)}
+                            disabled={processingApp === app.student_id}
+                          >
+                            {processingApp === app.student_id ? "..." : "Reject"}
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="bg-emerald-600 text-white hover:bg-emerald-700"
+                            onClick={() => handleApproveApplication(app.student_id)}
+                            disabled={processingApp === app.student_id}
+                          >
+                            {processingApp === app.student_id ? "..." : "Approve"}
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
