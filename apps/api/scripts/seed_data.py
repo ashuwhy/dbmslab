@@ -22,6 +22,7 @@ def hash_password(password):
 
 
 INSTRUCTOR_PWD = hash_password("instructor123")
+STUDENT_PWD = hash_password("student123")
 
 # Instructor data: (full_name, email)
 INSTRUCTOR_DATA = [
@@ -30,6 +31,10 @@ INSTRUCTOR_DATA = [
     ("Yoshua Bengio", "yoshua.bengio@oxford.edu"),
     ("Fei-Fei Li", "fei-fei@stanford.edu"),
     ("Ian Goodfellow", "ian.goodfellow@mit.edu"),
+]
+
+STUDENT_DATA = [
+    ("Student User", "student@iitkgp.ac.in"),
 ]
 
 
@@ -92,7 +97,39 @@ async def ensure_app_users(session):
         session.add(user)
         print(f"  {email} CREATED (pwd: instructor123)")
     await session.commit()
+    await session.commit()
 
+
+async def ensure_student_accounts(session):
+    """Create app_user and student profile for demo student."""
+    print("\n-- 4b. Student accounts --")
+    for name, email in STUDENT_DATA:
+        # 1. Ensure AppUser
+        r = await session.execute(select(AppUser).where(AppUser.email == email))
+        if r.scalar_one_or_none():
+            print(f"  {email} app_user exists OK")
+        else:
+            user = AppUser(email=email, password_hash=STUDENT_PWD, role="student")
+            session.add(user)
+            print(f"  {email} app_user CREATED (pwd: student123)")
+        
+        # 2. Ensure Student Profile
+        r = await session.execute(select(Student).where(Student.email == email))
+        if r.scalar_one_or_none():
+            print(f"  {email} student profile exists OK")
+        else:
+            student = Student(
+                full_name=name,
+                email=email,
+                age=22,
+                country="India",
+                category="student",
+                skill_level="intermediate"
+            )
+            session.add(student)
+            print(f"  {email} student profile CREATED")
+            
+    await session.commit()
 
 async def link_instructors(session):
     """Link instructor.user_id -> app_user.id."""
@@ -345,6 +382,12 @@ async def verify(session):
   |   yoshua.bengio@oxford.edu                     |
   |   fei-fei@stanford.edu                         |
   |   ian.goodfellow@mit.edu                       |
+  |   yoshua.bengio@oxford.edu                     |
+  |   fei-fei@stanford.edu                         |
+  |   ian.goodfellow@mit.edu                       |
+  |                                                |
+  | STUDENT (pwd: student123)                      |
+  |   student@iitkgp.ac.in                         |
   +------------------------------------------------+
 """)
 
@@ -361,6 +404,7 @@ async def main():
     async with AsyncSessionLocal() as session:
         await ensure_instructors(session)
         await ensure_app_users(session)
+        await ensure_student_accounts(session)
         await link_instructors(session)
         await ensure_teaching_assignments(session)
         await backfill_student_emails(session)

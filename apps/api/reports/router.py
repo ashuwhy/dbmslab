@@ -72,7 +72,8 @@ async def instructor_performance(db: AsyncSession = Depends(get_db)):
     data = []
     for r in result:
         i_id, i_name, t_id, t_name, i_avg = r
-        g_avg = topic_avgs.get(t_id, 0)
+        g_avg = topic_avgs.get(t_id) or 0
+        i_avg = i_avg or 0
         ipi = i_avg / g_avg if g_avg and g_avg > 0 else 0
         data.append({
             "instructor": i_name,
