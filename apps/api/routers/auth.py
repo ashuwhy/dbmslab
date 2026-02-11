@@ -27,7 +27,6 @@ import bcrypt
 # pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def verify_password(plain_password, hashed_password):
-    # Validates the password against the hash
     if isinstance(plain_password, str):
         plain_password = plain_password.encode('utf-8')
     if isinstance(hashed_password, str):
@@ -35,7 +34,6 @@ def verify_password(plain_password, hashed_password):
     return bcrypt.checkpw(plain_password, hashed_password)
 
 def get_password_hash(password):
-    # Hashes the password
     if isinstance(password, str):
         password = password.encode('utf-8')
     return bcrypt.hashpw(password, bcrypt.gensalt()).decode('utf-8')
@@ -52,17 +50,10 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
 
 @router.post("/register", response_model=UserResponse)
 async def register(user: UserCreate, db: AsyncSession = Depends(get_db)):
-    # In a real app, only admins should call this, or it should be open with restrictions.
-    # Assignment requirement: "admin-only can create users" -> We need to verify this if the requester is verified.
-    # But for bootstrapping, we might need a first user.
-    # Let's verify email uniqueness first.
     result = await db.execute(select(AppUser).where(AppUser.email == user.email))
     if result.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Email already registered")
-    
-    # Check if there are ANY users. If 0, allow creating Admin.
-    # If not 0, require Admin role (TODO: add dependency later if needed, or keeping it simple for now)
-    
+
     hashed_password = get_password_hash(user.password)
     db_user = AppUser(email=user.email, password_hash=hashed_password, role=user.role)
     db.add(db_user)

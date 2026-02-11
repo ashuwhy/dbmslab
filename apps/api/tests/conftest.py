@@ -1,6 +1,5 @@
 import os
 import sys
-# Add the project root to sys.path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pytest
@@ -13,10 +12,7 @@ import asyncio
 from typing import AsyncGenerator, Generator
 from sqlalchemy.pool import NullPool
 
-# Create a new engine for testing
 test_engine = create_async_engine(DATABASE_URL, echo=False, poolclass=NullPool)
-
-# Testing SessionLocal
 TestingSessionLocal = sessionmaker(
     bind=test_engine,
     class_=AsyncSession,

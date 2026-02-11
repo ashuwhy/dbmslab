@@ -192,8 +192,7 @@ async def ensure_teaching_assignments(session):
         if not iid or not cid:
             print(f"  SKIP: {email} -> {cname} (not found)")
             continue
-        
-        # Check if exists
+
         r = await session.execute(text(
             "SELECT 1 FROM teaching_assignment WHERE instructor_id=:iid AND course_id=:cid"
         ), {"iid": iid, "cid": cid})

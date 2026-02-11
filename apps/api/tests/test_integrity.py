@@ -69,16 +69,13 @@ async def test_delete_student_user_cascades(client: AsyncClient):
     user_id = data["id"]
     admin_token = await _admin_token(client)
 
-    # Verify user exists
     r = await client.get(f"/admin/users", headers=_auth_header(admin_token))
     assert r.status_code == 200
 
-    # Delete the user
     r = await client.delete(f"/admin/users/{user_id}", headers=_auth_header(admin_token))
     assert r.status_code == 200
     assert r.json()["message"] == "User deleted"
 
-    # Verify login fails (user gone)
     r = await client.post("/auth/login", json={"email": email, "password": "pass1234"})
     assert r.status_code in (401, 404)
 
@@ -210,12 +207,8 @@ async def test_delete_university_cascades_courses(client: AsyncClient):
         "description": "Test",
         "difficulty_level": "beginner"
     }, headers=inst_headers)
-    
-    # If program_id 1 doesn't exist, we might fail here. 
-    # But seed data usually puts some programs.
-    if r.status_code == 404: 
-        # Create program if missing? Or assume seed.
-        # Let's hope seed exists.
+
+    if r.status_code == 404:
         pass
     
     if r.status_code == 200:

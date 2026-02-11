@@ -3,7 +3,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
 
-# Authentication User (separate from domain tables)
+
 class AppUser(Base):
     __tablename__ = "app_user"
     

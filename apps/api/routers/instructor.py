@@ -629,7 +629,6 @@ async def grade_student(
     )
     db.add(audit_entry)
 
-    # Update the score
     enrollment.evaluation_score = grade.evaluation_score
     await db.commit()
 
@@ -756,7 +755,6 @@ async def add_topic_to_course(
     if not topic:
         raise HTTPException(status_code=404, detail="Topic not found")
 
-    # Check if already linked
     existing = await db.execute(
         select(CourseTopic).where(
             and_(
@@ -1084,7 +1082,6 @@ async def create_textbook(
     db: AsyncSession = Depends(get_db)
 ):
     """Create a new textbook record. Instructors and admins can use this."""
-    # Check for duplicate ISBN if provided
     if body.isbn:
         existing = await db.execute(select(Textbook).where(Textbook.isbn == body.isbn))
         if existing.scalar_one_or_none():

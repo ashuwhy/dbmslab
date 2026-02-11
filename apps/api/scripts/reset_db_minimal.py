@@ -48,16 +48,12 @@ async def main():
 
     print("2. Creating ONLY Admin user...")
     async with AsyncSessionLocal() as session:
-        # Create single admin
-        # Using hardcoded password hash for 'admin123' to avoid dependency issues if bcrypt differs
-        # But safest is to re-hash.
         pwd_hash = bcrypt.hashpw("admin123".encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-        
         admin = AppUser(
             email="admin@iitkgp.ac.in",
             password_hash=pwd_hash,
             role="admin",
-            approved_at=None # Admins might not need approval or auto-approved
+            approved_at=None
         )
         # Using execute to ensure ID=1 or just add
         session.add(admin)

@@ -10,8 +10,6 @@ from apps.api.models import AppUser, University # Import models to register them
 async def init_models():
     async with engine.begin() as conn:
         print("Creating tables...")
-        # This will create tables that don't exist (like app_user)
-        # It won't recreate existing tables
         await conn.run_sync(Base.metadata.create_all)
         print("Tables created.")
 

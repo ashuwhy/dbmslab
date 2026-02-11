@@ -255,7 +255,6 @@ async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
         stu_result = await db.execute(select(Student).where(Student.email == user.email))
         student = stu_result.scalar_one_or_none()
         if student:
-            # Delete enrollments (trigger trg_auto_enrollment_count auto-decrements counters)
             await db.execute(delete(Enrollment).where(Enrollment.student_id == student.student_id))
             await db.execute(delete(Student).where(Student.student_id == student.student_id))
 
@@ -263,10 +262,7 @@ async def delete_user(user_id: int, db: AsyncSession = Depends(get_db)):
         inst_result = await db.execute(select(Instructor).where(Instructor.email == user.email))
         instructor = inst_result.scalar_one_or_none()
         if instructor:
-            # teaching_assignments, course_proposals, topic_proposals cascade via DB FK
             await db.execute(delete(Instructor).where(Instructor.instructor_id == instructor.instructor_id))
-
-    # Executive is FK-cascaded (app_user_id ON DELETE CASCADE), deleted automatically
 
     await db.execute(delete(AppUser).where(AppUser.id == user_id))
     await db.commit()
@@ -603,17 +599,14 @@ async def assign_instructor(
     db: AsyncSession = Depends(get_db)
 ):
     """Assign an instructor to a course."""
-    # Check if course exists
     course = (await db.execute(select(Course).where(Course.course_id == course_id))).scalar_one_or_none()
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
-    
-    # Check if instructor exists
+
     instructor = (await db.execute(select(Instructor).where(Instructor.instructor_id == request.instructor_id))).scalar_one_or_none()
     if not instructor:
         raise HTTPException(status_code=404, detail="Instructor not found")
-    
-    # Check if assignment exists
+
     existing = await db.execute(
         select(TeachingAssignment).where(
             (TeachingAssignment.course_id == course_id) & 
@@ -658,10 +651,8 @@ async def delete_student(
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
 
-    # Delete enrollments (trigger trg_auto_enrollment_count auto-decrements counters)
     await db.execute(delete(Enrollment).where(Enrollment.student_id == student_id))
 
-    # Also remove the linked AppUser if it exists
     if student.email:
         await db.execute(delete(AppUser).where(AppUser.email == student.email))
 
@@ -676,7 +667,6 @@ async def delete_enrollment(
     db: AsyncSession = Depends(get_db)
 ):
     """Delete an enrollment (trigger handles counter update)."""
-    # Check enrollment exists
     enr_result = await db.execute(
         select(Enrollment).where(
             (Enrollment.student_id == student_id) &
@@ -687,7 +677,6 @@ async def delete_enrollment(
     if not enrollment:
         raise HTTPException(status_code=404, detail="Enrollment not found")
 
-    # Delete — trigger trg_auto_enrollment_count auto-decrements course.current_enrollment
     await db.execute(
         delete(Enrollment).where(
             (Enrollment.student_id == student_id) &
@@ -823,7 +812,6 @@ async def create_university(
     if not name or not country:
         raise HTTPException(status_code=400, detail="University name and country are required")
 
-    # Check for duplicate
     existing = await db.execute(select(University).where(func.lower(University.name) == name.lower()))
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=409, detail="University with this name already exists")

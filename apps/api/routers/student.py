@@ -126,8 +126,7 @@ async def get_courses(
         
     result = await db.execute(stmt)
     courses = result.scalars().unique().all()
-    
-    # Format response
+
     response = []
     for course in courses:
         response.append(CourseResponse(
@@ -147,14 +146,12 @@ async def enroll_course(
     db: AsyncSession = Depends(get_db)
 ):
     """Enroll current user in a course."""
-    # Find student record linked to AppUser
     result = await db.execute(select(Student).where(Student.email == current_user.email))
     student = result.scalar_one_or_none()
     
     if not student:
         raise HTTPException(status_code=404, detail="Student profile not found for this user")
-    
-    # Check if already enrolled
+
     existing = await db.execute(
         select(Enrollment).where(
             and_(
@@ -166,8 +163,6 @@ async def enroll_course(
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Already enrolled in this course")
 
-    # Lock the course row to prevent race conditions (Concurrency Control)
-    # This prevents multiple students from grabbing the last seat simultaneously
     course_stmt = select(Course).where(Course.course_id == request.course_id).with_for_update()
     course_result = await db.execute(course_stmt)
     course = course_result.scalar_one_or_none()
@@ -178,9 +173,6 @@ async def enroll_course(
     if course.current_enrollment >= course.max_capacity:
         raise HTTPException(status_code=400, detail="Course is full")
 
-    # current_enrollment is auto-incremented by DB trigger trg_auto_enrollment_count
-
-    # Create enrollment as pending (instructor must approve)
     new_enrollment = Enrollment(
         student_id=student.student_id,
         course_id=request.course_id,

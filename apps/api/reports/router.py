@@ -18,8 +18,6 @@ async def get_module_analytics(db: AsyncSession = Depends(get_db)):
     Cohort Analysis: Track retention or completion rates.
     Simple version: Avg scores per program type.
     """
-    # This is a placeholder for complex cohort analysis which might need more time-series data
-    # For now, let's show avg score by program type
     stmt = (
         select(
             Course.program_id, 
