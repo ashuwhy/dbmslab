@@ -1,0 +1,275 @@
+\documentclass[a4paper,12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{newtxtext,newtxmath} % Times New Roman style for text and math
+\usepackage[margin=1in]{geometry} % Standard 1-inch margins
+\usepackage{booktabs} % Professional academic tables
+\usepackage{tabularx} % Auto-width tables
+\usepackage{enumitem} % Better list control
+\usepackage{titlesec} % Section heading formatting
+\usepackage{fancyhdr} % Headers and footers
+\usepackage{hyperref} % Hyperlinks
+\usepackage{graphicx} % For including images
+\usepackage{placeins} % For \FloatBarrier
+
+% Header and Footer setup
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\small \textit{DBMS Lab -- Assignment IV}}
+\rhead{\small \textit{Student Academic Management System}}
+\cfoot{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% Section heading adjustments (Compact and bold)
+\titleformat{\section}{\large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}{\normalsize\itshape}{\thesubsubsection}{1em}{}
+
+% Table setup
+\newcolumntype{L}{>{\raggedright\arraybackslash}X} % Left-aligned scalable column
+\newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}} % Fixed width, left aligned
+
+\begin{document}
+
+% Title Block
+\begin{center}
+    \vspace*{0.5cm}
+    {\LARGE \textbf{Index Corruption -- Assignment IV}} \\[0.5em]
+    {\large DBMS Lab -- Assignment IV} \\[1.5em]
+\end{center}
+
+\noindent This document describes the group, schema design, and technology stack for the Student Academic Management System (DBMS Lab Assignment IV).
+
+\section{Group Name and Members}
+
+\noindent \textbf{Group Name:} Index Corruption
+
+\noindent \textbf{Members:}
+\begin{itemize}[noitemsep, topsep=0pt]
+    \item Ashutosh Sharma (23CS10005)
+    \item Sujal Anil Kaware (23CS30056)
+    \item Parag Mahadeo Chimankar (23CS10049)
+    \item Kshetrimayum Abo (23CS30029)
+    \item Kartik Pandey (23CS30026)
+\end{itemize}
+
+\section{Schema Design}
+
+The system uses a PostgreSQL database with the following tables. The schema supports universities, programs, courses, students, instructors, enrollments, teaching assignments, content items, and role-based access control.
+
+\subsection{RBAC and Users}
+
+\begin{table}[h]
+    \centering
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabularx}{\textwidth}{@{} l L @{}}
+        \toprule
+        \textbf{Table} & \textbf{Description} \\
+        \midrule
+        \texttt{app\_user} & Roles-based access control: \texttt{id} (PK), \texttt{email} (unique), \texttt{password\_hash}, \texttt{role} (admin / instructor / student / analyst), \texttt{created\_at}. Links to \texttt{student.email} or \texttt{instructor.email}. \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\subsection{Core Domain Tables}
+
+\begin{table}[h]
+    \centering
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabularx}{\textwidth}{@{} l L @{}}
+        \toprule
+        \textbf{Table} & \textbf{Key Columns} \\
+        \midrule
+        \texttt{university} & \texttt{university\_id} (PK), \texttt{name} (unique), \texttt{country} \\
+        \texttt{program} & \texttt{program\_id} (PK), \texttt{program\_name}, \texttt{program\_type}, \texttt{duration\_weeks\_or\_months} \\
+        \texttt{course} & \texttt{course\_id} (PK), \texttt{course\_name} (unique), \texttt{duration\_weeks}, \texttt{university\_id} (FK), \texttt{program\_id} (FK), \texttt{textbook\_id} (FK) \\
+        \texttt{textbook} & \texttt{textbook\_id} (PK), \texttt{title}, \texttt{isbn} (unique), \texttt{url} \\
+        \texttt{topic} & \texttt{topic\_id} (PK), \texttt{topic\_name} (unique) \\
+        \texttt{course\_topic} & \texttt{course\_id} (FK, PK), \texttt{topic\_id} (FK, PK) \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\subsection{People and Assignments}
+
+\begin{table}[h]
+    \centering
+    \renewcommand{\arraystretch}{1.2}
+    \begin{tabularx}{\textwidth}{@{} l L @{}}
+        \toprule
+        \textbf{Table} & \textbf{Key Columns} \\
+        \midrule
+        \texttt{student} & \texttt{student\_id} (PK), \texttt{email} (unique), \texttt{full\_name}, \texttt{age} ($\ge$ 13), \texttt{country}, \texttt{category}, \texttt{skill\_level} \\
+        \texttt{instructor} & \texttt{instructor\_id} (PK), \texttt{full\_name}, \texttt{email} (unique) \\
+        \texttt{enrollment} & \texttt{student\_id} (FK, PK), \texttt{course\_id} (FK, PK), \texttt{enroll\_date}, \texttt{evaluation\_score} \\
+        \texttt{teaching\_assignment} & \texttt{instructor\_id} (FK, PK), \texttt{course\_id} (FK, PK), \texttt{role} \\
+        \texttt{content\_item} & \texttt{content\_id} (PK), \texttt{course\_id} (FK), \texttt{content\_type}, \texttt{title}, \texttt{url} \\
+        \bottomrule
+    \end{tabularx}
+\end{table}
+
+\subsection{Relationships (Summary)}
+\begin{itemize}[noitemsep]
+    \item \textbf{Course} belongs to one University and one Program; has one Textbook; many ContentItems; many Enrollments; many TeachingAssignments; many Topics via \texttt{course\_topic}.
+    \item \textbf{Student} has many Enrollments; email links to \texttt{app\_user} for login.
+    \item \textbf{Instructor} has many TeachingAssignments; email links to \texttt{app\_user} for login.
+    \item \textbf{Enrollment} is a many-to-many between Student and Course with \texttt{enroll\_date} and \texttt{evaluation\_score}.
+    \item \textbf{Teaching assignment} is a many-to-many between Instructor and Course with \texttt{role}.
+\end{itemize}
+
+\section{Entity-Relationship Diagram}
+
+The complete ER diagram for the Student Academic Management System is shown below.
+
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=\textwidth,keepaspectratio]{er.jpeg}
+    \caption{Entity-Relationship Diagram for Student Academic Management System}
+    \label{fig:er-diagram}
+\end{figure}
+
+% IMPORTANT: prevents the figure from floating past this point
+\FloatBarrier
+
+\section{Languages and Technology Stack}
+
+\subsection{Overview}
+\begin{itemize}[noitemsep]
+    \item \textbf{Frontend:} Next.js (App Router), React, TypeScript
+    \item \textbf{Backend:} FastAPI (Python 3.11+)
+    \item \textbf{Database:} PostgreSQL
+    \item \textbf{Build/Tooling:} Make, uv (or pip), npm
+\end{itemize}
+
+\subsection{Backend (API)}
+\begin{itemize}[noitemsep]
+    \item \textbf{Language:} Python 3.11+
+    \item \textbf{Framework:} FastAPI
+    \item \textbf{ORM / DB:} SQLAlchemy 2.x (async), asyncpg (PostgreSQL driver)
+    \item \textbf{Validation \& Settings:} Pydantic, pydantic-settings
+    \item \textbf{Auth:} JWT (python-jose), password hashing (passlib/bcrypt)
+    \item \textbf{Server:} Uvicorn
+\end{itemize}
+
+\subsection{Frontend (Web)}
+\begin{itemize}[noitemsep]
+    \item \textbf{Language:} TypeScript
+    \item \textbf{Framework:} Next.js 16 (App Router)
+    \item \textbf{UI:} React 19, Tailwind CSS 4, Radix UI (dialogs, labels, scroll-area, etc.), Lucide React (icons)
+    \item \textbf{Linting:} ESLint, eslint-config-next
+\end{itemize}
+
+\subsection{Project Structure}
+\begin{itemize}[noitemsep]
+    \item \texttt{/apps/api} -- FastAPI backend (routers: auth, student, instructor, admin, analyst)
+    \item \texttt{/apps/web} -- Next.js frontend (admin, analyst, instructor, student, login)
+    \item \texttt{/docs} -- Documentation (API.md, SCHEMA.md) and this submission document
+\end{itemize}
+
+\section{Functionalities and Workflows}
+
+The system implements a complete academic management platform with four user roles, each with distinct capabilities and dedicated frontend pages.
+
+\subsection{Roles}
+
+The platform defines four roles, each enforced via JWT-based Role-Based Access Control (RBAC):
+
+\begin{enumerate}[noitemsep]
+    \item \textbf{Student} -- Browse courses, apply for enrollment, view course materials, and check grades.
+    \item \textbf{Instructor} -- Manage assigned courses, create content, grade students, propose new courses and topics, and view course analytics.
+    \item \textbf{Analyst} -- Access platform-wide data, generate performance reports, and analyze trends.
+    \item \textbf{Admin} -- Approve registrations, manage users, approve course/topic proposals, and oversee all data.
+\end{enumerate}
+
+\subsection{Registration and Approval Workflow}
+
+Each role follows a distinct onboarding process:
+
+\subsubsection{Student Registration}
+Students register by providing name, email, age ($\ge$ 13), country, skill level, and password. A corresponding \texttt{student} record is created immediately. No admin approval is required; students can log in and use the platform right away.
+
+\subsubsection{Instructor Registration}
+Instructors register with name, email, years of teaching experience, and password. An \texttt{app\_user} record is created with \texttt{approved\_at = NULL} and a linked \texttt{instructor} record is inserted. The instructor \textbf{cannot log in} until an admin sets \texttt{approved\_at} via the admin dashboard.
+
+\subsubsection{Analyst Registration}
+Analysts register with name, email, and password. Similar to instructors, their \texttt{app\_user} record has \texttt{approved\_at = NULL} and a linked \texttt{executive} record (type = analyst) is created. Admin approval is required before login.
+
+\subsubsection{Admin}
+Admins are bootstrapped or created by existing admins. They can also create users of any role directly from the admin panel.
+
+\subsection{Student Module}
+
+\begin{itemize}[noitemsep]
+    \item \textbf{Browse Courses:} Students can search and filter available courses by name, topic, program type, university, and maximum duration.
+    \item \textbf{Apply for Enrollment:} Students submit an enrollment application for a course. The enrollment is created with \texttt{status = pending} and a capacity slot is reserved.
+    \item \textbf{My Applications:} Students can track the status of their pending or rejected applications.
+    \item \textbf{My Enrollments:} Once approved by the instructor, students can view their enrolled courses, grades, and enrollment dates.
+    \item \textbf{Course Detail Page:} For each enrolled course, students can view course materials (content items), textbook information, assigned instructors, topics, and their personal evaluation score.
+    \item \textbf{Student Statistics:} Students can view aggregate stats such as number of courses enrolled, average score, highest score, and courses completed.
+\end{itemize}
+
+\subsection{Instructor Module}
+
+\begin{itemize}[noitemsep]
+    \item \textbf{Dashboard:} Displays all courses assigned to the instructor with student counts.
+    \item \textbf{Student Management:} For each course, instructors can view enrolled students and pending applications. They can approve or reject student enrollment applications.
+    \item \textbf{Grading:} Instructors can set or update evaluation scores (0--100) for enrolled students. All grade changes are logged in the \texttt{audit\_log} table for accountability.
+    \item \textbf{Content Management:} Instructors can add content items (books, videos, notes with URLs) to their courses, and delete existing content.
+    \item \textbf{Topic Management:} Instructors can link approved topics to their courses, or remove topic associations.
+    \item \textbf{Course Proposals:} Instructors can propose new courses by specifying the name, duration, university, program, and textbook. The proposal enters a \texttt{pending} state and must be approved by an admin.
+    \item \textbf{Topic Proposals:} Similarly, instructors can propose new topics for admin approval.
+    \item \textbf{Course Analytics:} For each course, instructors can view score distribution (grade buckets A/B/C/D/F), pass rate, at-risk student count, average score, and total students.
+    \item \textbf{Instructor Statistics:} Aggregate view of total courses taught, total students, overall average score, and highest/lowest course averages.
+    \item \textbf{Textbook Management:} Instructors can create new textbook records for use in course proposals.
+\end{itemize}
+
+\subsection{Admin Module}
+
+\begin{itemize}[noitemsep]
+    \item \textbf{Dashboard:} Displays system-wide statistics (total users, courses, students, instructors, enrollments).
+    \item \textbf{User Management:} List all users; create new users with any role (automatically creates linked \texttt{student}, \texttt{instructor}, or \texttt{executive} records as appropriate). Delete users with cascading removal of dependent records.
+    \item \textbf{Registration Approvals:} View and approve/reject pending instructor and analyst registrations by setting the \texttt{approved\_at} timestamp.
+    \item \textbf{Course Proposal Approvals:} Review pending course proposals from instructors. On approval, the system automatically creates the course, assigns the proposing instructor, and links specified topics. Proposals can also be rejected.
+    \item \textbf{Topic Proposal Approvals:} Review and approve/reject topic proposals. On approval, a new \texttt{topic} record is created if it does not already exist.
+    \item \textbf{Course Management:} Create courses directly, update course details (name, duration, university, program, topics), and assign or remove instructors from courses.
+    \item \textbf{Student/Instructor Editing:} Update details for students (name, email, country, age, skill level) and instructors (name, email) via modal dialogs.
+    \item \textbf{Enrollment Management:} Delete individual enrollments; the database trigger automatically updates the course's \texttt{current\_enrollment} counter.
+    \item \textbf{University Management:} Create new university records for use in course creation.
+\end{itemize}
+
+\subsection{Analyst Module}
+
+\begin{itemize}[noitemsep]
+    \item \textbf{Overall Statistics:} Total courses, students, enrollments, and platform-wide average evaluation score.
+    \item \textbf{Most Popular Course:} Identifies the course with the highest enrollment count, with optional university-based filtering.
+    \item \textbf{Enrollments per Course:} Breakdown of enrollment counts for each course.
+    \item \textbf{Average Score by Course:} Average evaluation scores ranked across all courses.
+    \item \textbf{Top Indian Student by AI Average:} Finds the highest-performing Indian student in AI-related courses (uses \texttt{ILIKE} pattern matching on country and topic name).
+    \item \textbf{Courses by University:} Course count distribution across universities.
+    \item \textbf{Students by Country:} Geographic distribution of the student body.
+    \item \textbf{Skill Level Distribution:} Breakdown of students by skill level (beginner, intermediate, advanced).
+    \item \textbf{Top Courses:} Highest-enrollment courses with average scores.
+\end{itemize}
+
+\subsubsection{Advanced Reports (Reports Module)}
+\begin{itemize}[noitemsep]
+    \item \textbf{Module Analytics:} Cohort analysis showing average scores and student counts per program type.
+    \item \textbf{Instructor Performance Index (IPI):} Computes the ratio of an instructor's average score to the global topic average, identifying high- and low-performing instructors per topic.
+    \item \textbf{At-Risk Students:} Identifies students whose average evaluation score falls below a configurable threshold (default: 40).
+    \item \textbf{Topic Trends:} Ranks topics by total enrollment volume to identify trending subject areas.
+\end{itemize}
+
+\subsection{Advanced DBMS Features}
+
+The following advanced PostgreSQL features are utilized in the system:
+
+\begin{itemize}[noitemsep]
+    \item \textbf{Database Triggers:} A PL/pgSQL trigger (\texttt{trg\_auto\_enrollment\_count}) automatically increments or decrements \texttt{course.current\_enrollment} on enrollment insert or delete, ensuring data consistency without application-level logic.
+    \item \textbf{Audit Logging:} Grade changes are recorded in the \texttt{audit\_log} table (old score, new score, changed by, timestamp), providing a complete audit trail. The audit log is viewable per course by instructors.
+    \item \textbf{Window Functions:} Student rankings within a course are computed using PostgreSQL window functions (\texttt{RANK()}, \texttt{DENSE\_RANK()}, \texttt{PERCENT\_RANK()}, \texttt{ROW\_NUMBER()}) with \texttt{OVER (ORDER BY evaluation\_score DESC)}.
+    \item \textbf{Pessimistic Locking:} A safe enrollment endpoint uses \texttt{SELECT ... FOR UPDATE} to lock the course row during enrollment, preventing race conditions when multiple students attempt to claim the last available seat simultaneously.
+    \item \textbf{Check Constraints:} Enforced at the database level for \texttt{student.age} ($\ge 13$, $\le 100$), \texttt{enrollment.evaluation\_score} (0--100), and \texttt{course.duration\_weeks} ($> 0$).
+    \item \textbf{Indexes:} Strategic indexes on frequently queried columns (\texttt{student.country}, \texttt{enrollment.evaluation\_score}, \texttt{course.duration\_weeks}, \texttt{course.course\_name}) to optimize query performance.
+\end{itemize}
+
+\end{document}
