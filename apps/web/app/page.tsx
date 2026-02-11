@@ -3,11 +3,12 @@
 import { useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { getRole } from '@/lib/auth';
 
 import { HugeiconsIcon } from '@hugeicons/react';
-import { BookOpen01Icon, TeacherIcon, ChartHistogramIcon, Mortarboard01Icon } from '@hugeicons/core-free-icons';
+import { BookOpen01Icon, ChartHistogramIcon, Mortarboard01Icon } from '@hugeicons/core-free-icons';
+import Dither from '@/components/Dither';
+
 
 const subscribe = (callback: () => void) => {
   if (typeof window === 'undefined') return () => { };
@@ -24,10 +25,21 @@ export default function Home() {
   const isLoggedIn = !!role;
 
   const features = [
-    { icon: <HugeiconsIcon icon={BookOpen01Icon} className="w-10 h-10 text-white" />, title: 'Browse Courses', desc: 'Explore courses from top universities worldwide' },
-    { icon: <HugeiconsIcon icon={TeacherIcon} className="w-10 h-10 text-white" />, title: 'Expert Instructors', desc: 'Learn from industry leaders and academics' },
-    { icon: <HugeiconsIcon icon={ChartHistogramIcon} className="w-10 h-10 text-white" />, title: 'Track Progress', desc: 'Monitor your learning journey with analytics' },
-    { icon: <HugeiconsIcon icon={Mortarboard01Icon} className="w-10 h-10 text-white" />, title: 'Get Certified', desc: 'Earn certificates and diplomas' },
+    {
+      icon: <HugeiconsIcon icon={BookOpen01Icon} className="h-5 w-5 text-zinc-200" />,
+      title: 'Curated Programs',
+      desc: 'Learn core AI, ML, and data topics with focused, practical tracks.',
+    },
+    {
+      icon: <HugeiconsIcon icon={ChartHistogramIcon} className="h-5 w-5 text-zinc-200" />,
+      title: 'Clear Progress',
+      desc: 'Stay consistent with simple milestones and measurable outcomes.',
+    },
+    {
+      icon: <HugeiconsIcon icon={Mortarboard01Icon} className="h-5 w-5 text-zinc-200" />,
+      title: 'Recognized Credentials',
+      desc: 'Complete projects and earn certificates that support your career growth.',
+    },
   ];
 
   const dashboardHref =
@@ -44,75 +56,102 @@ export default function Home() {
     role === 'instructor' ? '/instructor/courses' : role === 'student' ? '/student/courses' : '/';
 
   return (
-    <div className="flex flex-col min-h-[calc(80vh-4rem)]">
-      {/* Hero Section: Welcome back when logged in, else landing CTA */}
-      <section className="flex-1 flex flex-col items-center justify-center text-center space-y-2">
-        <div className="space-y-4 max-w-3xl mb-10">
+    <div className="relative min-h-screen min-h-dvh overflow-x-hidden bg-black text-white ">
+      <div className="pointer-events-none absolute inset-0 z-0">
+        <Dither
+          waveColor={[0.56, 0.36, 1]}
+          disableAnimation={false}
+          enableMouseInteraction
+          mouseRadius={0.35}
+          colorNum={4}
+          pixelSize={2}
+          waveAmplitude={0.3}
+          waveFrequency={3}
+          waveSpeed={0.05}
+        />
+        {/* <div className="absolute inset-0 bg-black/35" /> */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.14),rgba(0,0,0,0)_45%)]" />
+      </div>
+      <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-col px-6 pb-12 pt-20 md:pt-28">
+        <section className="mx-auto w-full max-w-4xl text-center">
+          <p className="mx-auto mb-6 inline-flex items-center border border-white/15 bg-white/5 px-3 py-1 text-xs uppercase tracking-[0.18em] text-zinc-300">
+            Index Corruption Institute
+          </p>
+
           {isLoggedIn ? (
             <>
-              <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-white">
-                Welcome back
+              <h1 className="text-balance text-4xl font-semibold leading-tight tracking-tight text-white md:text-6xl">
+                Welcome back.
+                <br />
+                <span className="text-zinc-300 capitalize">{role}</span> dashboard is ready.
               </h1>
-              <p className="text-lg md:text-xl text-zinc-500 max-w-2xl mx-auto leading-relaxed">
-                You're signed in as <span className="text-zinc-300 capitalize">{role}</span>.
-                Go to your dashboard or explore below.
+              <p className="mx-auto mt-5 max-w-2xl text-pretty text-base leading-relaxed text-zinc-400 md:text-lg">
+                Continue learning, manage your work, and keep momentum with a focused workspace.
               </p>
             </>
           ) : (
             <>
-              <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-white">
-                Master Your Craft with <br />
-                <span className="text-zinc-400">World-Class Education</span>
+              <h1 className="text-balance text-4xl font-semibold leading-tight tracking-tight text-white md:text-6xl">
+                Learn with clarity.
+                <br />
+                Build real skills faster.
               </h1>
-              <p className="text-lg md:text-xl text-zinc-500 max-w-2xl mx-auto leading-relaxed">
-                Access courses in AI, Machine Learning, Data Science, and more.
-                Advance your career with certifications from top institutions.
+              <p className="mx-auto mt-5 max-w-2xl text-pretty text-base leading-relaxed text-zinc-400 md:text-lg">
+                Structured courses in AI, machine learning, and data science designed for consistent progress.
               </p>
             </>
           )}
-        </div>
 
-        <div className="flex gap-4">
-          {isLoggedIn ? (
-            <>
-              <Button asChild size="lg" className="h-12 px-8 text-base">
-                <Link href={dashboardHref}>Go to Dashboard</Link>
-              </Button>
-              {coursesHref !== '/' && (
-                <Button asChild variant="outline" size="lg" className="h-12 px-8 text-base">
-                  <Link href={coursesHref}>View Courses</Link>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            {isLoggedIn ? (
+              <>
+                <Button asChild size="lg" className="h-11 rounded-none bg-white px-6 text-sm font-medium text-black hover:bg-zinc-200">
+                  <Link href={dashboardHref}>Go to Dashboard</Link>
                 </Button>
-              )}
-            </>
-          ) : (
-            <>
-              <Button asChild size="lg" className="h-12 px-8 text-base">
-                <Link href="/login">Get Started</Link>
-              </Button>
-              <Button asChild variant="outline" size="lg" className="h-12 px-8 text-base">
-                <Link href="/login">View Courses</Link>
-              </Button>
-            </>
-          )}
-        </div>
-      </section>
+                {coursesHref !== '/' && (
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="lg"
+                    className="h-11 rounded-none border-white/20 bg-white/5 px-6 text-sm font-medium text-white backdrop-blur-sm hover:bg-white/10"
+                  >
+                    <Link href={coursesHref}>View Courses</Link>
+                  </Button>
+                )}
+              </>
+            ) : (
+              <>
+                <Button asChild size="lg" className="h-11 rounded-none bg-white px-6 text-sm font-medium text-black hover:bg-zinc-200">
+                  <Link href="/login">Get Started</Link>
+                </Button>
+                <Button
+                  asChild
+                  variant="outline"
+                  size="lg"
+                  className="h-11 rounded-none border-white/20 bg-white/5 px-6 text-sm font-medium text-white backdrop-blur-sm hover:bg-white/10"
+                >
+                  <Link href="/login">View Courses</Link>
+                </Button>
+              </>
+            )}
+          </div>
+        </section>
 
-      {/* Features Grid */}
-      <section className="border-zinc-800 w-full">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
-          {features.map((feature, i) => (
-            <Card key={i} className="bg-zinc-900/50 border-zinc-800 hover:border-zinc-700 transition-colors">
-              <CardHeader className="pb-3">
-                <div className="text-4xl mb-4">{feature.icon}</div>
-                <CardTitle className="text-lg">{feature.title}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-zinc-400 leading-relaxed">{feature.desc}</p>
-              </CardContent>
-            </Card>
+        <section className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {features.map((feature) => (
+            <article
+              key={feature.title}
+              className="border border-white/12 bg-black/25 p-5 backdrop-blur-sm transition-colors duration-200 hover:border-white/25"
+            >
+              <div className="mb-3 inline-flex h-9 w-9 items-center justify-center border border-white/15 bg-white/5">
+                {feature.icon}
+              </div>
+              <h2 className="text-base font-semibold text-white">{feature.title}</h2>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-400">{feature.desc}</p>
+            </article>
           ))}
-        </div>
-      </section>
+        </section>
+      </main>
     </div>
   );
 }

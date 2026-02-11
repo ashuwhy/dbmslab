@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import Navbar from './components/Navbar';
+import NavbarWrapper from './components/NavbarWrapper';
+import MainContentWrapper from './components/MainContentWrapper';
 
 export const metadata: Metadata = {
   title: 'Index Corruption Intitude',
@@ -15,9 +16,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={`bg-[#09090b] text-zinc-100 min-h-screen`}>
-        <Navbar />
-        <main className="mx-auto max-w-5xl px-6 py-8">
-          {children}
+        <NavbarWrapper />
+        <main>
+          <MainContentWrapper>{children}</MainContentWrapper>
         </main>
       </body>
     </html>

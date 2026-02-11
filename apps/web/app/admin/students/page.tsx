@@ -180,7 +180,7 @@ export default function AdminStudentsPage() {
                     <DialogHeader>
                         <DialogTitle>Edit Student</DialogTitle>
                         <DialogDescription>
-                            Make changes to the student's profile here. Click save when you're done.
+                            Make changes to the student&apos;s profile here. Click save when you&apos;re done.
                         </DialogDescription>
                     </DialogHeader>
                     {editingStudent && (
@@ -236,7 +236,7 @@ export default function AdminStudentsPage() {
                                 </Label>
                                 <select // Native select for simplicity
                                     id="skill"
-                                    className="flex h-9 w-full rounded-none border border-input bg-zinc-900 px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 col-span-3 border-zinc-700 text-zinc-100"
+                                    className="flex h-9 w-full rounded-none border border-input bg-zinc-900 px-3 py-1 text-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 col-span-3 border-zinc-700 text-zinc-100"
                                     value={editingStudent.skill_level || ''}
                                     onChange={(e) => setEditingStudent({ ...editingStudent, skill_level: e.target.value })}
                                 >

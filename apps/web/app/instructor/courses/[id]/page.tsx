@@ -409,20 +409,18 @@ export default function CourseDetailPage() {
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
-            className={`px-4 py-2.5 text-sm font-medium transition-colors relative ${
-              activeTab === tab.key
+            className={`px-4 py-2.5 text-sm font-medium transition-colors relative ${activeTab === tab.key
                 ? "text-white"
                 : "text-zinc-500 hover:text-zinc-300"
-            }`}
+              }`}
           >
             {tab.label}
             {tab.count !== undefined && (
               <span
-                className={`ml-2 text-xs px-1.5 py-0.5 rounded-sm ${
-                  activeTab === tab.key
+                className={`ml-2 text-xs px-1.5 py-0.5 rounded-sm ${activeTab === tab.key
                     ? "bg-zinc-700 text-zinc-200"
                     : "bg-zinc-800 text-zinc-500"
-                }`}
+                  }`}
               >
                 {tab.count}
               </span>
@@ -436,11 +434,10 @@ export default function CourseDetailPage() {
       {/* Feedback Message */}
       {message.text && (
         <div
-          className={`px-4 py-3 text-sm border ${
-            message.type === "success"
+          className={`px-4 py-3 text-sm border ${message.type === "success"
               ? "bg-emerald-950/50 text-emerald-400 border-emerald-800"
               : "bg-red-950/50 text-red-400 border-red-800"
-          }`}
+            }`}
         >
           {message.text}
         </div>
@@ -490,7 +487,7 @@ export default function CourseDetailPage() {
                     id="content-type"
                     value={contentType}
                     onChange={(e) => setContentType(e.target.value)}
-                    className="flex h-9 w-full rounded-none border border-zinc-700 bg-zinc-950 px-3 py-1 text-sm text-white shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    className="flex h-9 w-full rounded-none border border-zinc-700 bg-zinc-950 px-3 py-1 text-sm text-white transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   >
                     <option value="video">Video</option>
                     <option value="book">Book</option>
@@ -590,7 +587,7 @@ export default function CourseDetailPage() {
                     id="topic-select"
                     value={selectedTopicId}
                     onChange={(e) => setSelectedTopicId(e.target.value)}
-                    className="flex h-9 w-full rounded-none border border-zinc-700 bg-zinc-950 px-3 py-1 text-sm text-white shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    className="flex h-9 w-full rounded-none border border-zinc-700 bg-zinc-950 px-3 py-1 text-sm text-white transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   >
                     <option value="">Choose a topic…</option>
                     {availableTopics

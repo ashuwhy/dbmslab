@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import Dither from '@/components/Dither';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -47,9 +48,22 @@ export default function SignupInstructorPage() {
     };
 
     return (
-        <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center py-12 px-4">
-            <div className="w-full max-w-md space-y-6">
-                <Card className="border-zinc-800 bg-zinc-900/50">
+        <div className="relative flex min-h-screen items-center justify-center py-12 px-4 overflow-hidden bg-black text-white">
+            <div className="absolute inset-0 z-0">
+                <Dither
+                    waveColor={[0.56, 0.36, 1]}
+                    disableAnimation={false}
+                    enableMouseInteraction
+                    mouseRadius={0.35}
+                    colorNum={4}
+                    pixelSize={2}
+                    waveAmplitude={0.3}
+                    waveFrequency={3}
+                    waveSpeed={0.05}
+                />
+            </div>
+            <div className="w-full max-w-md space-y-6 relative z-10">
+                <Card className="border-white/10 bg-white/5 backdrop-blur-xl text-white shadow-2xl">
                     <CardHeader className="space-y-1 text-center">
                         <CardTitle className="text-2xl font-bold tracking-tight">Sign up as Instructor</CardTitle>
                         <CardDescription>Register to create courses. Your account will be reviewed by an admin.</CardDescription>

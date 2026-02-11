@@ -377,7 +377,7 @@ export default function AdminCoursesPage() {
                             <Label htmlFor="course">Select Course</Label>
                             <select
                                 id="course"
-                                className="flex h-9 w-full rounded-none border border-input bg-black/20 px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm text-zinc-100"
+                                className="flex h-9 w-full rounded-none border border-input bg-black/20 px-3 py-1 text-base transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm text-zinc-100"
                                 value={selectedCourse || ''}
                                 onChange={(e) => setSelectedCourse(Number(e.target.value) || null)}
                             >
@@ -393,7 +393,7 @@ export default function AdminCoursesPage() {
                             <Label htmlFor="instructor">Select Instructor</Label>
                             <select
                                 id="instructor"
-                                className="flex h-9 w-full rounded-none border border-input bg-black/20 px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm text-zinc-100"
+                                className="flex h-9 w-full rounded-none border border-input bg-black/20 px-3 py-1 text-base transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm text-zinc-100"
                                 value={selectedInstructor || ''}
                                 onChange={(e) => setSelectedInstructor(Number(e.target.value) || null)}
                             >

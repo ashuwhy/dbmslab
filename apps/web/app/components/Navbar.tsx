@@ -19,6 +19,7 @@ const subscribe = (callback: () => void) => {
 export default function Navbar() {
     const role = useSyncExternalStore(subscribe, getRole, () => null);
     const pathname = usePathname();
+    const isHome = pathname === '/';
 
     const handleLogout = () => {
         logout();
@@ -40,7 +41,12 @@ export default function Navbar() {
     };
 
     return (
-        <nav className="border-b border-zinc-800 sticky top-0 bg-[#09090b]/80 backdrop-blur-md z-50 transition-all duration-300">
+        <nav
+            className={`${isHome
+                ? 'absolute inset-x-0 top-0 z-50 border-b border-white/10 bg-black/15 backdrop-blur-xl supports-[backdrop-filter]:bg-black/10'
+                : 'sticky top-0 z-50 border-b border-white/10 bg-zinc-950/60 shadow-[0_8px_30px_rgb(0_0_0_/_0.25)] backdrop-blur-xl supports-[backdrop-filter]:bg-zinc-950/45'
+                } transition-all duration-300`}
+        >
             <div className="mx-auto max-w-7xl px-6">
                 <div className="flex h-16 items-center justify-between">
                     <div className="flex items-center gap-8">
